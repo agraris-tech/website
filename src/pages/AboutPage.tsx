@@ -1,6 +1,8 @@
 import { About } from '../components/About';
 import { Advantages } from '../components/Advantages';
 import { Award, Target, Users, Shield, Building2, Globe2, CheckCircle2, Handshake, ArrowRight } from 'lucide-react';
+import {useEffect, useState} from "react";
+import {AppPageLoader} from "../components/AppPageLoader";
 
 export function AboutPage() {
   const values = [
@@ -52,6 +54,17 @@ export function AboutPage() {
       details: 'Немецкая компания-партнер'
     }
   ];
+
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading) {
+    return <AppPageLoader />;
+  }
 
   return (
     <div>
@@ -139,7 +152,7 @@ export function AboutPage() {
               <h3 className="text-2xl mb-4 text-gray-900">Наша миссия</h3>
               <p className="text-lg text-gray-600">
                 Обеспечивать сельскохозяйственные предприятия Беларуси качественной европейской техникой, 
-                спос��бствуя развитию современного и эффективного аграрного сектора. Мы стремимся быть 
+                способствуя развитию современного и эффективного аграрного сектора. Мы стремимся быть
                 надежным партнером, предлагая не только технику, но и комплексную поддержку на всех 
                 этапах сотрудничества.
               </p>
@@ -215,7 +228,7 @@ export function AboutPage() {
               {
                 year: '2017',
                 title: 'Расширение ассортимента',
-                description: 'Добавление новых брендов и категорий техники: тракторов, комбайнов, прицепного оборудо��ания'
+                description: 'Добавление новых брендов и категорий техники: тракторов, комбайнов, прицепного оборудования'
               },
               {
                 year: '2019',
