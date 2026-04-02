@@ -6,10 +6,12 @@ import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import {getAllActiveProducts, getAllCategories, getBrands, getRootCategories} from '../services/strapi';
 import {AppPageLoader} from "../components/AppPageLoader";
+import {useLeadModal} from "../contexts/LeadModalContext";
 
 export function Home() {
   const [brands, setBrands] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { openCallback } = useLeadModal();
   const featuredEquipment = [
     {
       icon: Tractor,
@@ -41,7 +43,7 @@ export function Home() {
         setLoading(true);
         const data = await getBrands();
         setBrands(data);
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
       } catch (error) {
         console.error('Failed to load catalog data:', error);
@@ -52,9 +54,9 @@ export function Home() {
     loadBrands().then();
   }, []);
 
-  if (loading) {
-    return <AppPageLoader />;
-  }
+  // if (loading) {
+  //   return <AppPageLoader />;
+  // }
 
   return (
       <div>
@@ -144,7 +146,7 @@ export function Home() {
                   Связаться с нами
                 </button>
               </Link>
-              <button className="inline-flex items-center justify-center rounded-md border border-white px-6 py-3 text-white hover:bg-green-800 transition-colors">
+              <button onClick={openCallback} className="inline-flex items-center justify-center rounded-md border border-white px-6 py-3 text-white hover:bg-green-800 transition-colors">
                 Заказать звонок
               </button>
             </div>

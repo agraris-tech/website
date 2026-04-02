@@ -14,6 +14,7 @@ import { RouteLoader } from './components/RouteLoader';
 import { LeadRequestModal } from './components/LeadRequestModal';
 import { LeadModalProvider, useLeadModal } from './contexts/LeadModalContext';
 import {CartProvider} from "./contexts/CartContext";
+import SeoHead from "./components/SeoHead";
 
 function GlobalLeadModal() {
     const { open, setOpen, mode, productTitle } = useLeadModal();
@@ -32,6 +33,7 @@ function GlobalLeadModal() {
 export default function App() {
     return (
         <LeadModalProvider>
+            <SeoHead />
             <CartProvider children={undefined}>
             <Router>
                 <RouteLoader />
