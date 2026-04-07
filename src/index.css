@@ -3124,3 +3124,8 @@ html {
   line-height: 1.9;
   color: #374151;
 }
+
+button,
+a {
+  cursor: pointer;
+}

@@ -201,7 +201,7 @@ export function TabletProductPage() {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <h2 className="text-xl mb-4">Товар не найден</h2>
-        <Button onClick={() => navigate('/equipment')}>
+        <Button onClick={() => navigate('/catalog')}>
           Вернуться к каталогу
         </Button>
       </div>
@@ -238,7 +238,7 @@ export function TabletProductPage() {
       <div className="container mx-auto px-4">
         <Button 
           variant="ghost" 
-          onClick={() => navigate('/equipment')}
+          onClick={() => navigate('/catalog')}
           className="mb-4"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />

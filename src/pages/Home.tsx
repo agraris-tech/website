@@ -112,7 +112,7 @@ export function Home() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl mb-4 text-gray-900">
-                Официальный дилер ведущих брендов
+                Поставляем технику ведущих брендов
               </h2>
               <p className="text-lg text-gray-600">
                 Работаем напрямую с производителями

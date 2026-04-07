@@ -1,23 +1,11 @@
 import { Mail, Phone, MessageCircle, Send } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+// @ts-ignore
 import logo from 'figma:asset/d097aa7978abcdcbf60dc711079054870b2deb55.png';
 import { getBrands, getSiteSettings } from '../services/strapi';
-
-type SiteSettings = {
-  companyName?: string;
-  companySubtitle?: string;
-  legalName?: string;
-  companyShortDescription?: string;
-  phone?: string;
-  email?: string;
-  whatsappUrl?: string;
-  workHours?: string;
-  addressShort?: string;
-  callbackButtonText?: string;
-  privacyPolicyUrl?: string;
-  termsUrl?: string;
-};
+import { getRegionalContact, type SiteSettings } from '../lib/getRegionalContact';
+import { getHostname } from '../lib/getHostname';
 
 type BrandItem = {
   id: number;
@@ -28,13 +16,14 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [brands, setBrands] = useState<BrandItem[]>([]);
+  const contact = getRegionalContact(settings, getHostname());
 
   useEffect(() => {
     async function loadFooterData() {
       try {
         const [siteSettings, brandItems] = await Promise.all([
           getSiteSettings(),
-          getBrands({ limit: 4 }),
+          getBrands({ limit: 5 }),
         ]);
 
         setSettings(siteSettings);
@@ -49,32 +38,32 @@ export function Footer() {
 
   const sectionLinks = [
     { label: 'О компании', href: '/about' },
-    { label: 'Новая техника', href: '/equipment?category=selskohozyajstvennaya-tehnika-novaya',state: { scrollToFilters: true } },
-    { label: 'Техника Б/У', href: '/equipment?category=selhoztehnika-bu',state: { scrollToFilters: true } },
-    { label: 'Запчасти Grimme', href: '/equipment?category=zapchasti-grimme',state: { scrollToFilters: true } },
+    { label: 'Новая техника', href: '/catalog?category=selskohozyajstvennaya-tehnika-novaya',state: { scrollToFilters: true } },
+    { label: 'Техника Б/У', href: '/catalog?category=selhoztehnika-bu',state: { scrollToFilters: true } },
+    { label: 'Запчасти Grimme', href: '/catalog?category=zapchasti-grimme',state: { scrollToFilters: true } },
     { label: 'Контакты', href: '/contact' },
   ];
 
   const contactActions = [
     {
       icon: Phone,
-      label: settings?.phone || '',
-      href: settings?.phone ? `tel:${settings.phone.replace(/[^\d+]/g, '')}` : '#',
+      label: contact?.phone || '',
+      href: contact?.phone ? `tel:${contact.phone.replace(/[^\d+]/g, '')}` : '#',
     },
     {
       icon: Mail,
-      label: settings?.email || '',
-      href: settings?.email ? `mailto:${settings.email}` : '#',
+      label: contact?.email || '',
+      href: contact?.email ? `mailto:${contact.email}` : '#',
     },
     {
       icon: Send,
       label: 'Telegram',
-      href: settings?.telegramUrl || '#',
+      href: contact?.telegramUrl || '#',
     },
     {
       icon: MessageCircle,
       label: 'WhatsApp',
-      href: settings?.whatsappUrl || '#',
+      href: contact?.whatsappUrl || '#',
     },
   ].filter((item) => item.label || item.href !== '#');
 
@@ -133,10 +122,10 @@ export function Footer() {
             <div>
               <h4 className="text-white mb-4">Бренды</h4>
               <ul className="space-y-2">
-                {brands.map((brand) => (
+                {brands.map((brand:any) => (
                     <li key={brand.id}>
                       <Link
-                          to={`/equipment?brand=${encodeURIComponent(brand.name)}`}
+                          to={`/catalog?brand=${encodeURIComponent(brand.name)}`}
                           className="text-sm hover:text-green-500 transition-colors"
                       >
                         {brand.name}
@@ -153,34 +142,34 @@ export function Footer() {
             <div>
               <h4 className="text-white mb-4">Контакты</h4>
               <ul className="space-y-3">
-                {settings?.phone && (
+                {contact?.phone && (
                     <li>
                       <a
-                          href={`tel:${settings.phone.replace(/[^\d+]/g, '')}`}
+                          href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}
                           className="flex items-center gap-2 text-sm hover:text-green-500 transition-colors"
                       >
                         <Phone className="w-4 h-4" />
-                        {settings.phone}
+                        {contact.phone}
                       </a>
                     </li>
                 )}
 
-                {settings?.email && (
+                {contact?.email && (
                     <li>
                       <a
-                          href={`mailto:${settings.email}`}
+                          href={`mailto:${contact.email}`}
                           className="flex items-center gap-2 text-sm hover:text-green-500 transition-colors"
                       >
                         <Mail className="w-4 h-4" />
-                        {settings.email}
+                        {contact.email}
                       </a>
                     </li>
                 )}
 
-                {settings?.whatsappUrl && (
+                {contact?.whatsappUrl && (
                     <li>
                       <a
-                          href={settings.whatsappUrl}
+                          href={contact.whatsappUrl}
                           className="flex items-center gap-2 text-sm hover:text-green-500 transition-colors"
                           target="_blank"
                           rel="noopener noreferrer"
@@ -193,8 +182,8 @@ export function Footer() {
               </ul>
 
               <div className="mt-4 text-sm">
-                {settings?.addressShort && <p>{settings.addressShort}</p>}
-                {settings?.workHours && <p className="mt-2">{settings.workHours}</p>}
+                {contact?.addressShort && <p>{contact.addressShort}</p>}
+                {contact?.workingHours && <p className="mt-2">{contact.workingHours}</p>}
               </div>
             </div>
           </div>

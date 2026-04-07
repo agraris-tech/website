@@ -15,7 +15,7 @@ export function CartPage() {
         <p className="text-gray-600 mb-8 text-center max-w-md">
           Добавьте технику в корзину, чтобы продолжить оформление заказа
         </p>
-        <Link to="/equipment">
+        <Link to="/catalog">
           <Button className="bg-green-700 hover:bg-green-800">
             Перейти к каталогу
           </Button>
@@ -31,7 +31,7 @@ export function CartPage() {
     <div className="py-12 bg-gray-50">
       <div className="container mx-auto px-4">
         <div className="mb-8">
-          <Link to="/equipment" className="inline-flex items-center gap-2 text-gray-600 hover:text-green-700 transition-colors mb-4">
+          <Link to="/catalog" className="inline-flex items-center gap-2 text-gray-600 hover:text-green-700 transition-colors mb-4">
             <ArrowLeft className="w-4 h-4" />
             Вернуться к каталогу
           </Link>

@@ -1,7 +1,13 @@
 import { Button } from './ui/button';
 import { ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useLeadModal } from '../contexts/LeadModalContext';
 
 export function Hero() {
+
+  const navigate = useNavigate();
+  const { openCallback } = useLeadModal();
+
   return (
     <section id="home" className="relative h-[600px] md:h-[700px] flex items-center">
       <div className="absolute inset-0 z-0">
@@ -22,11 +28,20 @@ export function Hero() {
             Новая и б/у техника от ведущих мировых производителей. Гарантия качества и сервисное обслуживание.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button size="lg" className="bg-green-700 hover:bg-green-800 text-lg">
+            <Button
+                size="lg"
+                className="bg-green-700 hover:bg-green-800 text-lg"
+                onClick={() => navigate('/catalog', { state: { scrollToFilters: true } })}
+            >
               Посмотреть технику
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
-            <Button size="lg" variant="outline" className="bg-white/10 backdrop-blur-sm border-white text-white hover:bg-white/20 text-lg">
+            <Button
+                size="lg"
+                variant="outline"
+                className="bg-white/10 backdrop-blur-sm border-white text-white hover:bg-white/20 text-lg"
+                onClick={openCallback}
+            >
               Заказать звонок
             </Button>
           </div>

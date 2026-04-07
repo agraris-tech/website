@@ -1,4 +1,4 @@
-const API_URL = "https://kind-book-5d1041ab96.strapiapp.com/api";
+const API_URL = "http://localhost:1337/api";
 
 
 export async function getEquipmentCards() {
@@ -44,16 +44,38 @@ function getMediaUrl(url?: string | null) {
 }
 
 export async function getSiteSettings() {
-    const res = await fetch(`${API_URL}/site-settings?populate=*`);
+    const searchParams = new URLSearchParams();
+    searchParams.set("populate", "*");
+
+    const res = await fetch(`${API_URL}/site-settings?${searchParams.toString()}`);
     const json = await res.json();
 
+
     if (!res.ok) {
-        console.error('Failed to load site settings:', json);
+        console.error("Strapi site settings error:", json);
         return null;
     }
 
-    const items = Array.isArray(json.data) ? json.data : [];
-    return items[0] ?? null;
+    const item = Array.isArray(json?.data) ? json.data[0] : json?.data;
+
+    if (!item) return null;
+
+    return {
+        id: item.id,
+        documentId: item.documentId,
+        companyName: item.companyName ?? "",
+        companySubtitle: item.companySubtitle ?? "",
+        legalName: item.legalName ?? "",
+        companyShortDescription: item.companyShortDescription ?? "",
+        email: item.email ?? "",
+        privacyPolicyUrl: item.privacyPolicyUrl ?? "#",
+        termsUrl: item.termsUrl ?? "#",
+        websiteUrl: item.websiteUrl ?? "",
+
+        contactRu: item.contactRu ?? null,
+        contactBy: item.contactBy ?? null,
+        contactKz: item.contactKz ?? null,
+    };
 }
 
 

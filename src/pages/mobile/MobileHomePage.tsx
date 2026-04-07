@@ -33,7 +33,7 @@ export function MobileHomePage() {
               <Phone className="w-5 h-5" />
               Позвонить
             </a>
-            <Link to="/equipment" className="w-full border-2 border-green-700 text-green-700 py-3 px-6 rounded-lg flex items-center justify-center gap-2">
+            <Link to="/catalog" className="w-full border-2 border-green-700 text-green-700 py-3 px-6 rounded-lg flex items-center justify-center gap-2">
               Каталог техники
               <ArrowRight className="w-5 h-5" />
             </Link>

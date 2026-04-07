@@ -212,7 +212,7 @@ export function TabletEquipmentPage() {
                     <Button 
                       variant="outline" 
                       className="flex-1"
-                      onClick={() => navigate(`/equipment/${item.id}`)}
+                      onClick={() => navigate(`/catalog/${item.id}`)}
                     >
                       Подробнее
                     </Button>

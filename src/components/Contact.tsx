@@ -2,19 +2,12 @@ import { MapPin, Phone, Mail, Clock, MessageCircle, Globe } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { getSiteSettings } from '../services/strapi';
+import { getRegionalContact, type SiteSettings } from '../lib/getRegionalContact';
+import {getHostname} from "../lib/getHostname";
 
-type SiteSettings = {
-  legalName?: string;
-  fullAddress?: string;
-  phone?: string;
-  email?: string;
-  whatsappUrl?: string;
-  websiteUrl?: string;
-  contactPerson?: string;
-  workHours?: string;
-};
+
 
 export function Contact() {
   const [formData, setFormData] = useState({
@@ -25,6 +18,7 @@ export function Contact() {
   });
 
   const [settings, setSettings] = useState<SiteSettings | null>(null);
+  const contact = getRegionalContact(settings, getHostname());
 
   useEffect(() => {
     async function loadSettings() {
@@ -32,7 +26,7 @@ export function Contact() {
       setSettings(data);
     }
 
-    loadSettings();
+    loadSettings().then();
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -44,25 +38,25 @@ export function Contact() {
     {
       icon: MapPin,
       title: 'Адрес',
-      content: settings?.fullAddress || '',
+      content: contact?.fullAddress || '',
     },
     {
       icon: Phone,
       title: 'Телефон',
-      content: settings?.phone || '',
-      link: settings?.phone ? `tel:${settings.phone.replace(/[^\d+]/g, '')}` : undefined,
+      content: contact?.phone || '',
+      link: contact?.phone ? `tel:${contact.phone.replace(/[^\d+]/g, '')}` : undefined,
     },
     {
       icon: Mail,
       title: 'Email',
-      content: settings?.email || '',
-      link: settings?.email ? `mailto:${settings.email}` : undefined,
+      content: contact?.email || '',
+      link: contact?.email ? `mailto:${contact.email}` : undefined,
     },
     {
       icon: MessageCircle,
       title: 'WhatsApp',
-      content: settings?.whatsappUrl?.replace('https://wa.me/', '+') || '',
-      link: settings?.whatsappUrl || undefined,
+      content: contact?.whatsappUrl?.replace('https://wa.me/', '+') || '',
+      link: contact?.whatsappUrl || undefined,
     },
     {
       icon: Globe,
@@ -124,7 +118,7 @@ export function Contact() {
               <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border-2 border-green-200">
                 <h4 className="text-lg mb-3 text-gray-900">График работы офиса</h4>
                 <div className="space-y-2 text-gray-700">
-                  <p>{settings?.workHours || 'График работы будет добавлен позже'}</p>
+                  <p>{contact?.workingHours || 'График работы будет добавлен позже'}</p>
                 </div>
               </div>
             </div>
@@ -151,7 +145,7 @@ export function Contact() {
                       type="email"
                       placeholder="your@email.com"
                       value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      onChange={(e:any) => setFormData({ ...formData, email: e.target.value })}
                       required
                   />
                 </div>
@@ -163,7 +157,7 @@ export function Contact() {
                       type="tel"
                       placeholder="+375 (29) 123-45-67"
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e:any) => setFormData({ ...formData, phone: e.target.value })}
                   />
                 </div>
 
@@ -174,7 +168,7 @@ export function Contact() {
                       placeholder="Расскажите о вашем запросе..."
                       rows={5}
                       value={formData.message}
-                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                      onChange={(e:any) => setFormData({ ...formData, message: e.target.value })}
                       required
                   />
                 </div>

@@ -56,7 +56,7 @@ export function TabletHomePage() {
                   <Phone className="w-5 h-5" />
                   +375 (29) 525-44-37
                 </a>
-                <Link to="/equipment" className="border-2 border-green-700 text-green-700 py-4 px-8 rounded-lg flex items-center justify-center gap-3 hover:bg-green-50 transition-colors">
+                <Link to="/catalog" className="border-2 border-green-700 text-green-700 py-4 px-8 rounded-lg flex items-center justify-center gap-3 hover:bg-green-50 transition-colors">
                   Каталог техники
                   <ArrowRight className="w-5 h-5" />
                 </Link>

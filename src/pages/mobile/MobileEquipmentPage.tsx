@@ -140,7 +140,7 @@ export function MobileEquipmentPage() {
       <section className="py-6 px-4">
         <div className="space-y-4">
           {filteredEquipment.map((item) => (
-            <Card key={item.id} className="overflow-hidden" onClick={() => navigate(`/equipment/${item.id}`)}>
+            <Card key={item.id} className="overflow-hidden" onClick={() => navigate(`/catalog/${item.id}`)}>
               <div className="h-48 overflow-hidden">
                 <img 
                   src={item.image} 
@@ -177,7 +177,7 @@ export function MobileEquipmentPage() {
                       variant="outline"
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/equipment/${item.id}`);
+                        navigate(`/catalog/${item.id}`);
                       }}
                     >
                       Подробнее

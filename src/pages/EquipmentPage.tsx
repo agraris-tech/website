@@ -231,9 +231,9 @@ export function EquipmentPage() {
     setPage(1);
 
     if (value === 'all') {
-      navigate('/equipment', { state: { preserveScroll: true } });
+      navigate('/catalog', { state: { preserveScroll: true } });
     } else {
-      navigate(`/equipment?category=${value}`, {
+      navigate(`/catalog?category=${value}`, {
         state: { preserveScroll: true },
       });
     }
@@ -287,16 +287,15 @@ export function EquipmentPage() {
 
       return (
           <Card
-              key={item.id}
-              className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => navigate(`/equipment/${item.slug}`)}
+              className="cursor-pointer overflow-hidden hover:shadow-lg transition-shadow"
+              onClick={() => navigate(`/catalog/${item.slug}`)}
           >
             <div className="h-48 overflow-hidden">
               {item.image ? (
                   <img
                       src={item.image}
                       alt={item.title}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                   />
               ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
@@ -322,7 +321,7 @@ export function EquipmentPage() {
               )}
             </div>
 
-            <CardHeader>
+            <CardHeader className="cursor-pointer">
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-2">
                   {(() => {
@@ -357,28 +356,24 @@ export function EquipmentPage() {
                 <span className="text-sm text-gray-500">{item.brand?.name}</span>
               </div>
 
-              <CardTitle className="text-gray-900">{item.title}</CardTitle>
+              <CardTitle  className="cursor-pointer text-gray-900">{item.title}</CardTitle>
 
-              <CardDescription className="text-gray-600">
+              <CardDescription className="cursor-pointer text-gray-600">
                 {item.power ? `Мощность: ${item.power}` : item.category?.name}
               </CardDescription>
             </CardHeader>
 
-            <CardContent>
+            <CardContent className="cursor-pointer">
               <div className="flex justify-between items-center mb-4">
-            <span className="text-2xl text-green-700">
-              {formattedPrice}
-            </span>
+      <span className="text-2xl text-green-700">
+        {formattedPrice}
+      </span>
               </div>
 
               <div className="flex gap-2">
                 <Button
                     variant="outline"
-                    className="flex-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/equipment/${item.slug}`);
-                    }}
+                    className="flex-1 cursor-pointer"
                 >
                   Подробнее
                 </Button>

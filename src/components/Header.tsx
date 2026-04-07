@@ -1,20 +1,16 @@
-import { Menu, X, Phone, Mail, ChevronDown, ShoppingCart } from 'lucide-react';
+import { Menu, X, Phone, Mail, ChevronDown } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from './ui/button';
 import { Link, useLocation } from 'react-router-dom';
-import { useCart } from '../contexts/CartContext';
-import logo from 'figma:asset/d097aa7978abcdcbf60dc711079054870b2deb55.png';
 import { getBrands, getSiteSettings } from '../services/strapi';
 import { useLeadModal } from '../contexts/LeadModalContext';
+import { useCart } from '../contexts/CartContext';
+import { getRegionalContact, type SiteSettings } from '../lib/getRegionalContact';
+import { getHostname } from '../lib/getHostname';
+// @ts-ignore
+import logo from 'figma:asset/d097aa7978abcdcbf60dc711079054870b2deb55.png';
 
-type SiteSettings = {
-  companyName?: string;
-  companySubtitle?: string;
-  phone?: string;
-  email?: string;
-  workHours?: string;
-  callbackButtonText?: string;
-};
+
 
 type BrandItem = {
   id: number;
@@ -27,10 +23,13 @@ export function Header() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [brands, setBrands] = useState<BrandItem[]>([]);
 
+
   const location = useLocation();
   const { getTotalItems } = useCart();
   const totalItems = getTotalItems();
   const { openCallback } = useLeadModal();
+
+  const contact = getRegionalContact(settings, getHostname());
 
   useEffect(() => {
     async function loadHeaderData() {
@@ -47,25 +46,21 @@ export function Header() {
       }
     }
 
-    loadHeaderData();
+    loadHeaderData().then();
   }, []);
 
   const navItems = [
     { label: 'Главная', href: '/' },
     { label: 'О нас', href: '/about' },
-    { label: 'Каталог', href: '/equipment',},
+    { label: 'Каталог', href: '/catalog',},
     { label: 'Контакты', href: '/contact' },
   ];
 
   const equipmentCategories = [
-    { label: 'Новая техника', href: '/equipment?type=new' },
-    { label: 'Техника Б/У', href: '/equipment?type=used' },
+    { label: 'Новая техника', href: '/catalog?type=new' },
+    { label: 'Техника Б/У', href: '/catalog?type=used' },
   ];
 
-  // const brandColumns = [];
-  // for (let i = 0; i < brands.length; i += 4) {
-  //   brandColumns.push(brands.slice(i, i + 4));
-  // }
 
   return (
       <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -73,29 +68,29 @@ export function Header() {
           <div className="border-b border-gray-100 py-2">
             <div className="flex justify-between items-center">
               <div className="flex gap-6">
-                {settings?.phone && (
+                {contact?.phone && (
                     <a
-                        href={`tel:${settings.phone.replace(/[^\d+]/g, '')}`}
+                        href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}
                         className="flex items-center gap-2 text-sm text-gray-600 hover:text-green-700 transition-colors"
                     >
                       <Phone className="w-4 h-4" />
-                      <span>{settings.phone}</span>
+                      <span>{contact.phone}</span>
                     </a>
                 )}
 
-                {settings?.email && (
+                {contact?.email && (
                     <a
-                        href={`mailto:${settings.email}`}
+                        href={`mailto:${contact.email}`}
                         className="flex items-center gap-2 text-sm text-gray-600 hover:text-green-700 transition-colors"
                     >
                       <Mail className="w-4 h-4" />
-                      <span>{settings.email}</span>
+                      <span>{contact.email}</span>
                     </a>
                 )}
               </div>
 
               <div className="text-sm text-gray-600">
-                {settings?.workHours || ''}
+                {contact?.workingHours || ''}
               </div>
             </div>
           </div>
@@ -113,8 +108,8 @@ export function Header() {
               </Link>
 
               <nav className="hidden md:flex gap-8 items-center">
-                {navItems.map((item) =>
-                    item.hasSubmenu ? (
+                {navItems.map((item:any) =>
+                    item?.hasSubmenu ? (
                         <div
                             key={item.label}
                             className="relative"
@@ -168,7 +163,7 @@ export function Header() {
                                         {brands.map((brand) => (
                                             <li key={brand.id}>
                                               <Link
-                                                  to={`/equipment?brand=${encodeURIComponent(brand.name)}`}
+                                                  to={`/catalog?brand=${encodeURIComponent(brand.name)}`}
                                                   className="block text-gray-800 hover:text-green-700 transition-colors text-[17px] leading-7 whitespace-nowrap"
                                               >
                                                 {brand.name}
@@ -201,7 +196,7 @@ export function Header() {
               <div className="hidden md:flex items-center gap-4">
 
                 <Button onClick={openCallback} className="bg-green-700 hover:bg-green-800">
-                {settings?.callbackButtonText || 'Заказать звонок'}
+                {contact?.callbackButtonText || 'Заказать звонок'}
                 </Button>
               </div>
 
@@ -216,8 +211,8 @@ export function Header() {
 
           {mobileMenuOpen && (
               <nav className="md:hidden py-4 border-t border-gray-100">
-                {navItems.map((item) =>
-                    item.hasSubmenu ? (
+                {navItems.map((item:any) =>
+                    item?.hasSubmenu ? (
                         <div key={item.label}>
                           <button
                               className="w-full text-left py-3 text-gray-700 hover:text-green-700 transition-colors flex items-center justify-between"
@@ -249,7 +244,7 @@ export function Header() {
                                 {brands.map((brand) => (
                                     <Link
                                         key={brand.id}
-                                        to={`/equipment?brand=${encodeURIComponent(brand.name)}`}
+                                        to={`/catalog?brand=${encodeURIComponent(brand.name)}`}
                                         className="block py-2 text-gray-600 hover:text-green-700 transition-colors"
                                         onClick={() => setMobileMenuOpen(false)}
                                     >
@@ -293,7 +288,7 @@ export function Header() {
                 </Link>
 
                 <Button onClick={openCallback} className="w-full mt-4 bg-green-700 hover:bg-green-800">
-                  {settings?.callbackButtonText || 'Заказать звонок'}
+                  {contact?.callbackButtonText || 'Заказать звонок'}
                 </Button>
               </nav>
           )}

@@ -10,7 +10,6 @@ import { ResponsivePageWrapper } from './components/ResponsivePageWrapper';
 import { CartPage } from './pages/CartPage';
 import { Toaster } from './components/ui/sonner';
 import { ScrollManager } from './components/ScrollManager';
-import { RouteLoader } from './components/RouteLoader';
 import { LeadRequestModal } from './components/LeadRequestModal';
 import { LeadModalProvider, useLeadModal } from './contexts/LeadModalContext';
 import {CartProvider} from "./contexts/CartContext";
@@ -18,7 +17,7 @@ import SeoHead from "./components/SeoHead";
 
 function GlobalLeadModal() {
     const { open, setOpen, mode, productTitle } = useLeadModal();
-    console.log('GlobalLeadModal render', { open, mode, productTitle });
+
 
     return (
         <LeadRequestModal
@@ -36,7 +35,6 @@ export default function App() {
             <SeoHead />
             <CartProvider children={undefined}>
             <Router>
-                <RouteLoader />
                 <ScrollManager />
                 <div className="min-h-screen flex flex-col">
                     <Header />
@@ -59,7 +57,7 @@ export default function App() {
                                 }
                             />
                             <Route
-                                path="/equipment"
+                                path="/catalog"
                                 element={
                                     <ResponsivePageWrapper
                                         desktop={<EquipmentPage />}
@@ -67,7 +65,7 @@ export default function App() {
                                 }
                             />
                             <Route
-                                path="/equipment/:slug"
+                                path="/catalog/:slug"
                                 element={
                                     <ResponsivePageWrapper
                                         desktop={<ProductPage />}

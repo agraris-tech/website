@@ -3,6 +3,8 @@ import { Advantages } from '../components/Advantages';
 import { Award, Target, Users, Shield, Building2, Globe2, CheckCircle2, Handshake, ArrowRight } from 'lucide-react';
 import {useEffect, useState} from "react";
 import {AppPageLoader} from "../components/AppPageLoader";
+import {Link} from "react-router-dom";
+import {useLeadModal} from "../contexts/LeadModalContext";
 
 export function AboutPage() {
   const values = [
@@ -56,6 +58,7 @@ export function AboutPage() {
   ];
 
   const [loading, setLoading] = useState(true);
+  const { openCallback } = useLeadModal();
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 200);
@@ -80,7 +83,7 @@ export function AboutPage() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-4 py-2 rounded-full mb-6">
-                <Building2 className="w-4 h-4" />
+                <Building2 className="w-4 h-4"/>
                 <span className="text-sm">ООО "Аграрис Текник"</span>
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl mb-6 text-gray-900">
@@ -91,19 +94,25 @@ export function AboutPage() {
                 Европейская сельскохозяйственная техника в Беларуси с 2014 года
               </p>
               <div className="flex flex-wrap gap-4">
-                <a href="#company-info" className="inline-flex items-center gap-2 bg-green-700 text-white px-6 py-3 rounded-lg hover:bg-green-800 transition-colors">
-                  Узнать больше
-                  <ArrowRight className="w-4 h-4" />
-                </a>
-                <a href="/contact" className="inline-flex items-center gap-2 border-2 border-green-700 text-green-700 px-6 py-3 rounded-lg hover:bg-green-50 transition-colors">
-                  Связаться с нами
-                </a>
+                <Link to="/contact">
+                  <button
+                      className="inline-flex items-center justify-center rounded-md border border-green-700 bg-white px-6 py-3 text-green-700 hover:bg-green-50 transition-colors">
+                    Связаться с нами
+                  </button>
+                </Link>
+
+                <button
+                    onClick={openCallback}
+                    className="inline-flex items-center justify-center rounded-md px-6 py-3 text-white bg-green-700 hover:bg-green-800 transition-colors shadow-sm">
+                  Заказать звонок
+                </button>
               </div>
             </div>
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-green-700 to-green-600 rounded-3xl transform rotate-3"></div>
+              <div
+                  className="absolute inset-0 bg-gradient-to-br from-green-700 to-green-600 rounded-3xl transform rotate-3"></div>
               <img
-                src="https://images.unsplash.com/photo-1758873115193-bc8eab1b87bf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBhZ3JpY3VsdHVyZSUyMG1hY2hpbmVyeSUyMGZpZWxkfGVufDF8fHx8MTc2NjA1ODkxNXww&ixlib=rb-4.1.0&q=80&w=1080"
+                  src="https://images.unsplash.com/photo-1758873115193-bc8eab1b87bf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBhZ3JpY3VsdHVyZSUyMG1hY2hpbmVyeSUyMGZpZWxkfGVufDF8fHx8MTc2NjA1ODkxNXww&ixlib=rb-4.1.0&q=80&w=1080"
                 alt="Сельскохозяйственная техника"
                 className="relative rounded-3xl shadow-2xl w-full h-[400px] object-cover"
               />

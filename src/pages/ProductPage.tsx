@@ -24,18 +24,11 @@ import {useCart} from '../contexts/CartContext';
 import {toast} from 'sonner';
 import {getProductBySlug, getSiteSettings,getExchangeRates} from '../services/strapi';
 import { convertFromEur, formatConvertedPrice, getDomainCurrency } from '../lib/currency';
+// @ts-ignore
 import DOMPurify from 'dompurify';
+import { getRegionalContact, type SiteSettings } from '../lib/getRegionalContact';
+import {getHostname} from "../lib/getHostname";
 
-type SiteSettings = {
-    companyName?: string;
-    companySubtitle?: string;
-    phone?: string;
-    email?: string;
-    workHours?: string;
-    fullAddress?: string;
-    contactPerson?: string;
-    officeCity?: string;
-};
 
 
 type Product = {
@@ -95,7 +88,8 @@ export function ProductPage() {
     const [loading, setLoading] = useState(true);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
-    const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
+    const [settings, setSettings] = useState<SiteSettings | null>(null);
+    const contact = getRegionalContact(settings, getHostname());
     const { openProductOffer } = useLeadModal();
     const [exchangeRates, setExchangeRates] = useState<{
         baseCurrency: string;
@@ -124,7 +118,7 @@ export function ProductPage() {
                 ]);
 
                 setProduct(productData);
-                setSiteSettings(settingsData);
+                setSettings(settingsData);
                 setExchangeRates(ratesData);
             } catch (error) {
                 console.error('Failed to load product:', error);
@@ -206,7 +200,7 @@ export function ProductPage() {
             <div className="container mx-auto px-4">
                 <Button
                     variant="ghost"
-                    onClick={() => navigate('/equipment')}
+                    onClick={() => navigate('/catalog')}
                     className="mb-6"
                 >
                     <ArrowLeft className="w-4 h-4 mr-2"/>
@@ -586,14 +580,14 @@ export function ProductPage() {
                             <h3 className="text-2xl mb-6">Контакты и график работы</h3>
 
                             <div className="space-y-6">
-                                {siteSettings?.workHours && (
+                                {contact?.workingHours && (
                                     <>
                                         <div className="flex items-start gap-4">
                                             <Clock className="w-5 h-5 text-gray-400 mt-1"/>
                                             <div>
                                                 <div className="mb-2">График работы</div>
                                                 <div className="text-sm text-gray-600 whitespace-pre-line">
-                                                    {siteSettings.workHours}
+                                                    {contact?.workingHours}
                                                 </div>
                                             </div>
                                         </div>
@@ -601,14 +595,14 @@ export function ProductPage() {
                                     </>
                                 )}
 
-                                {siteSettings?.fullAddress && (
+                                {contact?.fullAddress && (
                                     <>
                                         <div className="flex items-start gap-4">
                                             <MapPin className="w-5 h-5 text-gray-400 mt-1"/>
                                             <div>
                                                 <div className="mb-2">Адрес</div>
                                                 <div className="text-sm text-gray-600 whitespace-pre-line">
-                                                    {siteSettings.fullAddress}
+                                                    {contact.fullAddress}
                                                 </div>
                                             </div>
                                         </div>
@@ -616,17 +610,17 @@ export function ProductPage() {
                                     </>
                                 )}
 
-                                {siteSettings?.phone && (
+                                {contact?.phone && (
                                     <>
                                         <div className="flex items-start gap-4">
                                             <Phone className="w-5 h-5 text-gray-400 mt-1"/>
                                             <div>
                                                 <div className="mb-2">Телефон</div>
                                                 <a
-                                                    href={`tel:${siteSettings.phone.replace(/[^\d+]/g, '')}`}
+                                                    href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}
                                                     className="text-sm text-green-700 hover:underline"
                                                 >
-                                                    {siteSettings.phone}
+                                                    {contact.phone}
                                                 </a>
                                             </div>
                                         </div>
@@ -634,16 +628,16 @@ export function ProductPage() {
                                     </>
                                 )}
 
-                                {siteSettings?.email && (
+                                {contact?.email && (
                                     <div className="flex items-start gap-4">
                                         <Mail className="w-5 h-5 text-gray-400 mt-1"/>
                                         <div>
                                             <div className="mb-2">Email</div>
                                             <a
-                                                href={`mailto:${siteSettings.email}`}
+                                                href={`mailto:${contact.email}`}
                                                 className="text-sm text-green-700 hover:underline"
                                             >
-                                                {siteSettings.email}
+                                                {contact.email}
                                             </a>
                                         </div>
                                     </div>

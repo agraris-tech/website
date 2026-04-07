@@ -202,7 +202,7 @@ export function MobileProductPage() {
     return (
       <div className="px-4 py-12 text-center">
         <h2 className="text-lg mb-4">Товар не найден</h2>
-        <Button size="sm" onClick={() => navigate('/equipment')}>
+        <Button size="sm" onClick={() => navigate('/catalog')}>
           Вернуться к каталогу
         </Button>
       </div>
@@ -240,7 +240,7 @@ export function MobileProductPage() {
         <Button 
           variant="ghost" 
           size="sm"
-          onClick={() => navigate('/equipment')}
+          onClick={() => navigate('/catalog')}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Назад

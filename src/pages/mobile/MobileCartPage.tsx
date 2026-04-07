@@ -15,7 +15,7 @@ export function MobileCartPage() {
         <p className="text-gray-600 mb-6 text-center text-sm">
           Добавьте технику в корзину, чтобы продолжить оформление заказа
         </p>
-        <Link to="/equipment">
+        <Link to="/catalog">
           <Button className="bg-green-700 hover:bg-green-800">
             Перейти к каталогу
           </Button>
@@ -31,7 +31,7 @@ export function MobileCartPage() {
     <div className="py-6 bg-gray-50">
       <div className="px-4">
         <div className="mb-6">
-          <Link to="/equipment" className="inline-flex items-center gap-2 text-gray-600 hover:text-green-700 transition-colors mb-3">
+          <Link to="/catalog" className="inline-flex items-center gap-2 text-gray-600 hover:text-green-700 transition-colors mb-3">
             <ArrowLeft className="w-4 h-4" />
             К каталогу
           </Link>

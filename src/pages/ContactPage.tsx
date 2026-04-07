@@ -1,38 +1,16 @@
 import { Contact } from '../components/Contact';
 import { MapPin, Phone, Mail, Clock, MessageCircle, Send } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import {getAllActiveProducts, getAllCategories, getRootCategories, getSiteSettings} from '../services/strapi';
-import {AppPageLoader} from "../components/AppPageLoader";
+import { getSiteSettings } from '../services/strapi';
+import { AppPageLoader } from '../components/AppPageLoader';
+import { getRegionalContact, type SiteSettings } from '../lib/getRegionalContact';
+import { getHostname } from '../lib/getHostname';
 
-type SiteSettings = {
-  companyName?: string;
-  legalName?: string;
-  phone?: string;
-  email?: string;
-  whatsappUrl?: string;
-  workHours?: string;
-  addressShort?: string;
-  fullAddress?: string;
-  websiteUrl?: string;
-  contactPerson?: string;
-  callbackButtonText?: string;
-
-  contactPageTitle?: string;
-  contactPageSubtitle?: string;
-  contactBadgeText?: string;
-
-  officeCity?: string;
-  officeRegionLabel?: string;
-
-  mapTitle?: string;
-  mapSubtitle?: string;
-  mapEmbedUrl?: string;
-  mapAddressLabel?: string;
-};
 
 export function ContactPage() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const contact = getRegionalContact(settings, getHostname());
 
 
   useEffect(() => {
@@ -87,31 +65,31 @@ export function ContactPage() {
               </p>
 
               <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">
-                {settings?.phone && (
+                {contact?.phone && (
                     <a
-                        href={`tel:${settings.phone.replace(/[^\d+]/g, '')}`}
+                        href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}
                         className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-200"
                     >
                       <Phone className="w-8 h-8 text-green-700 mx-auto mb-3" />
                       <div className="text-sm text-gray-600 mb-1">Позвонить</div>
-                      <div className="text-gray-900">{settings.phone}</div>
+                      <div className="text-gray-900">{contact.phone}</div>
                     </a>
                 )}
 
-                {settings?.email && (
+                {contact?.email && (
                     <a
-                        href={`mailto:${settings.email}`}
+                        href={`mailto:${contact.email}`}
                         className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-200"
                     >
                       <Mail className="w-8 h-8 text-green-700 mx-auto mb-3" />
                       <div className="text-sm text-gray-600 mb-1">Email</div>
-                      <div className="text-gray-900">{settings.email}</div>
+                      <div className="text-gray-900">{contact.email}</div>
                     </a>
                 )}
 
-                {settings?.whatsappUrl && (
+                {contact?.whatsappUrl && (
                     <a
-                        href={settings.whatsappUrl}
+                        href={contact.whatsappUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-200"
@@ -154,41 +132,41 @@ export function ContactPage() {
 
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    {settings?.fullAddress && (
+                    {contact?.fullAddress && (
                         <div className="flex gap-4">
                           <MapPin className="w-5 h-5 text-green-700 flex-shrink-0 mt-1" />
                           <div>
                             <p className="text-sm text-gray-500 mb-1">Адрес</p>
-                            <p className="text-gray-700">{settings.fullAddress}</p>
+                            <p className="text-gray-700">{contact.fullAddress}</p>
                           </div>
                         </div>
                     )}
 
-                    {settings?.phone && (
+                    {contact?.phone && (
                         <div className="flex gap-4">
                           <Phone className="w-5 h-5 text-green-700 flex-shrink-0 mt-1" />
                           <div>
                             <p className="text-sm text-gray-500 mb-1">Телефон</p>
                             <a
-                                href={`tel:${settings.phone.replace(/[^\d+]/g, '')}`}
+                                href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}
                                 className="text-gray-700 hover:text-green-700 transition-colors"
                             >
-                              {settings.phone}
+                              {contact.phone}
                             </a>
                           </div>
                         </div>
                     )}
 
-                    {settings?.email && (
+                    {contact?.email && (
                         <div className="flex gap-4">
                           <Mail className="w-5 h-5 text-green-700 flex-shrink-0 mt-1" />
                           <div>
                             <p className="text-sm text-gray-500 mb-1">Email</p>
                             <a
-                                href={`mailto:${settings.email}`}
+                                href={`mailto:${contact.email}`}
                                 className="text-gray-700 hover:text-green-700 transition-colors"
                             >
-                              {settings.email}
+                              {contact.email}
                             </a>
                           </div>
                         </div>
@@ -196,29 +174,29 @@ export function ContactPage() {
                   </div>
 
                   <div className="space-y-4">
-                    {settings?.whatsappUrl && (
+                    {contact?.whatsappUrl && (
                         <div className="flex gap-4">
                           <MessageCircle className="w-5 h-5 text-green-700 flex-shrink-0 mt-1" />
                           <div>
                             <p className="text-sm text-gray-500 mb-1">WhatsApp</p>
                             <a
-                                href={settings.whatsappUrl}
+                                href={contact.whatsappUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-gray-700 hover:text-green-700 transition-colors"
                             >
-                              {settings.whatsappUrl.replace('https://wa.me/', '+')}
+                              {contact.whatsappUrl.replace('https://wa.me/', '+')}
                             </a>
                           </div>
                         </div>
                     )}
 
-                    {settings?.workHours && (
+                    {contact?.workingHours && (
                         <div className="flex gap-4">
                           <Clock className="w-5 h-5 text-green-700 flex-shrink-0 mt-1" />
                           <div>
                             <p className="text-sm text-gray-500 mb-1">Режим работы</p>
-                            <p className="text-gray-700">{settings.workHours}</p>
+                            <p className="text-gray-700">{contact.workingHours}</p>
                           </div>
                         </div>
                     )}
@@ -243,14 +221,14 @@ export function ContactPage() {
                 {settings?.mapTitle || 'Как нас найти'}
               </h2>
               <p className="text-xl text-gray-600">
-                {settings?.mapSubtitle || 'Мы находимся в Брестском районе'}
+                {settings?.mapSubtitle || 'Мы находимся в Беларуси'}
               </p>
             </div>
 
-            {settings?.mapEmbedUrl ? (
+            {contact?.mapEmbedUrl ? (
                 <div className="rounded-2xl overflow-hidden shadow-sm border border-gray-200">
                   <iframe
-                      src={settings.mapEmbedUrl}
+                      src={contact.mapEmbedUrl}
                       width="100%"
                       height="450"
                       loading="lazy"
@@ -265,10 +243,10 @@ export function ContactPage() {
                     <MapPin className="w-16 h-16 mx-auto mb-4" />
                     <p className="text-lg mb-2">Интерактивная карта</p>
                     <p className="text-sm text-gray-600 mb-4">
-                      {settings?.mapAddressLabel || settings?.addressShort || 'Адрес офиса'}
+                      {settings?.mapAddressLabel || contact?.addressShort || 'Адрес офиса'}
                     </p>
                     <p className="text-sm text-gray-500">
-                      {settings?.fullAddress || 'Адрес будет добавлен позже'}
+                      {contact?.fullAddress || 'Адрес будет добавлен позже'}
                     </p>
                   </div>
                 </div>

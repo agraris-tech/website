@@ -119,7 +119,7 @@ export function Equipment() {
 
                 <div className="bg-gray-50 rounded-2xl p-8 md:p-12">
                     <h3 className="text-2xl md:text-3xl mb-8 text-center text-gray-900">
-                        Официальный дилер ведущих брендов
+                        Поставляем технику ведущих брендов
                     </h3>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
