@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:1337/api";
+const API_URL = "https://kind-book-5d1041ab96.strapiapp.com/api";
 
 
 export async function getEquipmentCards() {
