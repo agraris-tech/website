@@ -2,7 +2,7 @@ import { Menu, X, Phone, Mail, ChevronDown } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from './ui/button';
 import { Link, useLocation } from 'react-router-dom';
-import { getBrands, getSiteSettings } from '../services/strapi';
+import { getBrands,getTopBrands, getSiteSettings } from '../services/strapi';
 import { useLeadModal } from '../contexts/LeadModalContext';
 import { useCart } from '../contexts/CartContext';
 import { getRegionalContact, type SiteSettings } from '../lib/getRegionalContact';
@@ -36,7 +36,7 @@ export function Header() {
       try {
         const [siteSettings, brandItems] = await Promise.all([
           getSiteSettings(),
-          getBrands(),
+          getTopBrands(5),
         ]);
 
         setSettings(siteSettings);
@@ -53,6 +53,7 @@ export function Header() {
     { label: 'Главная', href: '/' },
     { label: 'О нас', href: '/about' },
     { label: 'Каталог', href: '/catalog',},
+    { label: 'Новости', href: '/news',},
     { label: 'Контакты', href: '/contact' },
   ];
 

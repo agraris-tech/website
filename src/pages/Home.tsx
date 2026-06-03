@@ -4,7 +4,7 @@ import { Badge } from '../components/ui/badge';
 import { Tractor, Combine, Truck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import {getAllActiveProducts, getAllCategories, getBrands, getRootCategories} from '../services/strapi';
+import {getAllActiveProducts, getAllCategories, getBrands,getTopBrands, getRootCategories} from '../services/strapi';
 import {AppPageLoader} from "../components/AppPageLoader";
 import {useLeadModal} from "../contexts/LeadModalContext";
 
@@ -41,7 +41,7 @@ export function Home() {
     async function loadBrands() {
       try {
         setLoading(true);
-        const data = await getBrands();
+        const data = await getTopBrands();
         setBrands(data);
         await new Promise((resolve) => setTimeout(resolve, 100));
 

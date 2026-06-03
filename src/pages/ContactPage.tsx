@@ -61,7 +61,7 @@ export function ContactPage() {
 
               <p className="text-xl text-gray-600 mb-10">
                 {settings?.contactPageSubtitle ||
-                    `${settings?.legalName || 'ООО "Аграрис Текник"'} готово ответить на все ваши вопросы и подобрать оптимальное решение`}
+                    `${settings?.legalName || 'ООО "Аграрис Текник"'} готов ответить на все ваши вопросы и подобрать оптимальное решение`}
               </p>
 
               <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">

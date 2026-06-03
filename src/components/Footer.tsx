@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 // @ts-ignore
 import logo from 'figma:asset/d097aa7978abcdcbf60dc711079054870b2deb55.png';
-import { getBrands, getSiteSettings } from '../services/strapi';
+import { getBrands, getTopBrands, getSiteSettings } from '../services/strapi';
 import { getRegionalContact, type SiteSettings } from '../lib/getRegionalContact';
 import { getHostname } from '../lib/getHostname';
 
@@ -23,7 +23,7 @@ export function Footer() {
       try {
         const [siteSettings, brandItems] = await Promise.all([
           getSiteSettings(),
-          getBrands({ limit: 5 }),
+          getTopBrands(5),
         ]);
 
         setSettings(siteSettings);

@@ -6,6 +6,8 @@ import { AboutPage } from './pages/AboutPage';
 import { EquipmentPage } from './pages/EquipmentPage';
 import { ContactPage } from './pages/ContactPage';
 import { ProductPage } from './pages/ProductPage';
+import { NewsPage } from './pages/NewsPage';
+import { NewsDetailPage } from './pages/NewsDetailPage';
 import { ResponsivePageWrapper } from './components/ResponsivePageWrapper';
 import { CartPage } from './pages/CartPage';
 import { Toaster } from './components/ui/sonner';
@@ -69,6 +71,22 @@ export default function App() {
                                 element={
                                     <ResponsivePageWrapper
                                         desktop={<ProductPage />}
+                                    />
+                                }
+                            />
+                            <Route
+                                path="/news"
+                                element={
+                                    <ResponsivePageWrapper
+                                        desktop={<NewsPage />}
+                                    />
+                                }
+                            />
+                            <Route
+                                path="/news/:slug"
+                                element={
+                                    <ResponsivePageWrapper
+                                        desktop={<NewsDetailPage />}
                                     />
                                 }
                             />

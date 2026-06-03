@@ -1,4 +1,4 @@
-const API_URL = "https://kind-book-5d1041ab96.strapiapp.com/api";
+const API_URL = "http://127.0.0.1:1337/api";
 
 
 export async function getEquipmentCards() {
@@ -65,6 +65,7 @@ export async function getSiteSettings() {
         documentId: item.documentId,
         companyName: item.companyName ?? "",
         companySubtitle: item.companySubtitle ?? "",
+        contactPerson: item.contactPerson ?? "",
         legalName: item.legalName ?? "",
         companyShortDescription: item.companyShortDescription ?? "",
         email: item.email ?? "",
@@ -223,7 +224,7 @@ export async function getAllActiveProducts() {
 }
 
 
-export async function getTopBrands(limit = 8) {
+export async function getTopBrands(limit?: { limit: number }) {
     const searchParams = new URLSearchParams();
     searchParams.set("filters[isActive][$eq]", "true");
     searchParams.set("pagination[pageSize]", "500");

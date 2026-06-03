@@ -467,23 +467,14 @@ export function ProductPage() {
                             <div className="space-y-4">
 
                                 {/* Наличие */}
-                                {product.availability && (
+
                                     <>
                                         <div>
                                             <div className="text-sm text-gray-500 mb-1">Наличие</div>
-                                            <div className="text-lg">
-                                                {product.availability === 'in_stock'
-                                                    ? 'В наличии'
-                                                    : product.availability === 'on_request'
-                                                        ? 'Под заказ'
-                                                        : product.availability === 'out_of_stock'
-                                                            ? 'Нет в наличии'
-                                                            : product.availability}
-                                            </div>
+                                            <div className="text-lg">В наличии</div>
                                         </div>
                                         <Separator/>
                                     </>
-                                )}
 
                                 {/* Страна */}
                                 {product.country && (
@@ -531,24 +522,14 @@ export function ProductPage() {
                                     </>
                                 )}
 
-                                {/* Тип продажи */}
-                                {product.saleType && (
+
                                     <>
                                         <div>
                                             <div className="text-sm text-gray-500 mb-1">Тип продажи</div>
-                                            <div className="text-lg">
-                                                {product.saleType === 'retail'
-                                                    ? 'Только в розницу'
-                                                    : product.saleType === 'wholesale'
-                                                        ? 'Только оптом'
-                                                        : product.saleType === 'both'
-                                                            ? 'Оптом и в розницу'
-                                                            : product.saleType}
-                                            </div>
+                                            <div className="text-lg">Оптом и в розницу</div>
                                         </div>
                                         <Separator/>
                                     </>
-                                )}
 
                                 {/* Состояние */}
                                 {(product.conditionLabel || product.type) && (

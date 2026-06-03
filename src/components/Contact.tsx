@@ -34,6 +34,8 @@ export function Contact() {
     console.log('Form submitted:', formData);
   };
 
+  console.log(settings)
+
   const contactInfo = [
     {
       icon: MapPin,
