@@ -1,4 +1,4 @@
-const API_URL = "http://127.0.0.1:1337/api";
+const API_URL = "https://cozy-action-02025ea19f.strapiapp.com/api";
 
 
 export async function getEquipmentCards() {
