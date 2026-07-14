@@ -73,7 +73,7 @@ function getStrapiBaseUrl(): string | null {
         process.env.STRAPI_URL ||
         process.env.STRAPI_API_URL ||
         process.env.VITE_STRAPI_URL ||
-        '';
+        "";
 
     const cleanUrl = configuredUrl
         .trim()
