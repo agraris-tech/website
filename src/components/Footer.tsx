@@ -1,82 +1,176 @@
-import { Mail, Phone, MessageCircle, Send } from 'lucide-react';
+import {
+  Mail,
+  Phone,
+  MessageCircle,
+  Send,
+  type LucideIcon,
+} from 'lucide-react';
+
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+
+import {
+  getTopBrands,
+  getSiteSettings,
+} from '../services/strapi';
+
+import {
+  getRegionalContact,
+  type SiteSettings,
+} from '../lib/getRegionalContact';
+
+import { getHostname } from '../lib/getHostname';
+
+import {
+  trackContactAndNavigate,
+  trackContactClick,
+  type ContactChannel,
+} from '../lib/googleAdsContacts';
+
 // @ts-ignore
 import logo from 'figma:asset/d097aa7978abcdcbf60dc711079054870b2deb55.png';
-import { getBrands, getTopBrands, getSiteSettings } from '../services/strapi';
-import { getRegionalContact, type SiteSettings } from '../lib/getRegionalContact';
-import { getHostname } from '../lib/getHostname';
 
 type BrandItem = {
   id: number;
   name: string;
 };
 
+type ContactAction = {
+  icon: LucideIcon;
+  label: string;
+  href: string;
+  channel: ContactChannel;
+};
+
 export function Footer() {
   const currentYear = new Date().getFullYear();
-  const [settings, setSettings] = useState<SiteSettings | null>(null);
+
+  const [settings, setSettings] =
+      useState<SiteSettings | null>(null);
+
   const [brands, setBrands] = useState<BrandItem[]>([]);
-  const contact = getRegionalContact(settings, getHostname());
+
+  const contact = getRegionalContact(
+      settings,
+      getHostname(),
+  );
+
+  const phoneHref = contact?.phone
+      ? `tel:${contact.phone.replace(/[^\d+]/g, '')}`
+      : '';
+
+  const emailHref = contact?.email
+      ? `mailto:${contact.email}`
+      : '';
 
   useEffect(() => {
     async function loadFooterData() {
       try {
-        const [siteSettings, brandItems] = await Promise.all([
-          getSiteSettings(),
-          getTopBrands(5),
-        ]);
+        const [siteSettings, brandItems] =
+            await Promise.all([
+              getSiteSettings(),
+              getTopBrands(5),
+            ]);
 
         setSettings(siteSettings);
         setBrands(brandItems);
       } catch (error) {
-        console.error('Failed to load footer data:', error);
+        console.error(
+            'Failed to load footer data:',
+            error,
+        );
       }
     }
 
-    loadFooterData();
+    loadFooterData().catch(console.error);
   }, []);
 
   const sectionLinks = [
-    { label: 'О компании', href: '/about' },
-    { label: 'Новая техника', href: '/catalog?category=selskohozyajstvennaya-tehnika-novaya',state: { scrollToFilters: true } },
-    { label: 'Техника Б/У', href: '/catalog?category=selhoztehnika-bu',state: { scrollToFilters: true } },
-    { label: 'Запчасти Grimme', href: '/catalog?category=zapchasti-grimme',state: { scrollToFilters: true } },
-    { label: 'Контакты', href: '/contact' },
+    {
+      label: 'О компании',
+      href: '/about',
+      state: undefined,
+    },
+    {
+      label: 'Новая техника',
+      href: '/catalog?category=selskohozyajstvennaya-tehnika-novaya',
+      state: {
+        scrollToFilters: true,
+      },
+    },
+    {
+      label: 'Техника Б/У',
+      href: '/catalog?category=selhoztehnika-bu',
+      state: {
+        scrollToFilters: true,
+      },
+    },
+    {
+      label: 'Запчасти Grimme',
+      href: '/catalog?category=zapchasti-grimme',
+      state: {
+        scrollToFilters: true,
+      },
+    },
+    {
+      label: 'Контакты',
+      href: '/contact',
+      state: undefined,
+    },
   ];
 
-  const contactActions = [
+  const contactActions: ContactAction[] = [
     {
       icon: Phone,
       label: contact?.phone || '',
-      href: contact?.phone ? `tel:${contact.phone.replace(/[^\d+]/g, '')}` : '#',
+      href: phoneHref || '#',
+      channel: 'phone',
     },
     {
       icon: Mail,
       label: contact?.email || '',
-      href: contact?.email ? `mailto:${contact.email}` : '#',
+      href: emailHref || '#',
+      channel: 'email',
     },
     {
       icon: Send,
       label: 'Telegram',
       href: contact?.telegramUrl || '#',
+      channel: 'telegram',
     },
     {
       icon: MessageCircle,
       label: 'WhatsApp',
       href: contact?.whatsappUrl || '#',
+      channel: 'whatsapp',
     },
-  ].filter((item) => item.label || item.href !== '#');
+  ].filter((item) => item.href !== '#');
 
   return (
       <footer className="bg-gray-900 text-gray-300">
         <div className="container mx-auto px-4 py-12">
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
             <div>
-              <Link to="/" className="flex items-center gap-3 mb-4">
-                <img src={logo} alt="Agraris Logo" className="w-12 h-12 object-contain" />
+              <Link
+                  to="/"
+                  className="flex items-center gap-3 mb-4"
+              >
+                <img
+                    src={logo}
+                    alt="Agraris Logo"
+                    className="w-12 h-12 object-contain"
+                />
+
                 <div>
-                  <h3 className="text-xl text-white">{settings?.companyName || 'AGRARIS'}</h3>
-                  <p className="text-xs">{settings?.companySubtitle || 'Сельхозтехника'}</p>
+                  <h3 className="text-xl text-white">
+                    {settings?.companyName ||
+                        'AGRARIS'}
+                  </h3>
+
+                  <p className="text-xs">
+                    {settings?.companySubtitle ||
+                        'Сельхозтехника'}
+                  </p>
                 </div>
               </Link>
 
@@ -86,18 +180,56 @@ export function Footer() {
               </p>
 
               <div className="flex gap-3">
-                {contactActions.map((item, index) => {
+                {contactActions.map((item) => {
                   const Icon = item.icon;
-                  const isExternal = item.href.startsWith('http');
+
+                  const isExternal =
+                      item.channel ===
+                      'telegram' ||
+                      item.channel ===
+                      'whatsapp';
 
                   return (
                       <a
-                          key={index}
+                          key={item.channel}
                           href={item.href}
-                          aria-label={item.label}
+                          aria-label={
+                            item.label
+                          }
                           className="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-green-700 transition-colors"
-                          target={isExternal ? '_blank' : undefined}
-                          rel={isExternal ? 'noopener noreferrer' : undefined}
+                          target={
+                            isExternal
+                                ? '_blank'
+                                : undefined
+                          }
+                          rel={
+                            isExternal
+                                ? 'noopener noreferrer'
+                                : undefined
+                          }
+                          onClick={(
+                              event,
+                          ) => {
+                            if (
+                                item.channel ===
+                                'phone' ||
+                                item.channel ===
+                                'email'
+                            ) {
+                              event.preventDefault();
+
+                              trackContactAndNavigate(
+                                  item.channel,
+                                  item.href,
+                              );
+
+                              return;
+                            }
+
+                            trackContactClick(
+                                item.channel,
+                            );
+                          }}
                       >
                         <Icon className="w-4 h-4" />
                       </a>
@@ -107,25 +239,43 @@ export function Footer() {
             </div>
 
             <div>
-              <h4 className="text-white mb-4">Разделы</h4>
+              <h4 className="text-white mb-4">
+                Разделы
+              </h4>
+
               <ul className="space-y-2">
-                {sectionLinks.map((link, index) => (
-                    <li key={index}>
-                      <Link to={link.href} state={link.state} className="text-sm hover:text-green-500 transition-colors">
-                        {link.label}
-                      </Link>
-                    </li>
-                ))}
+                {sectionLinks.map(
+                    (link) => (
+                        <li key={link.href}>
+                          <Link
+                              to={link.href}
+                              state={
+                                link.state
+                              }
+                              className="text-sm hover:text-green-500 transition-colors"
+                          >
+                            {
+                              link.label
+                            }
+                          </Link>
+                        </li>
+                    ),
+                )}
               </ul>
             </div>
 
             <div>
-              <h4 className="text-white mb-4">Бренды</h4>
+              <h4 className="text-white mb-4">
+                Бренды
+              </h4>
+
               <ul className="space-y-2">
-                {brands.map((brand:any) => (
+                {brands.map((brand) => (
                     <li key={brand.id}>
                       <Link
-                          to={`/catalog?brand=${encodeURIComponent(brand.name)}`}
+                          to={`/catalog?brand=${encodeURIComponent(
+                              brand.name,
+                          )}`}
                           className="text-sm hover:text-green-500 transition-colors"
                       >
                         {brand.name}
@@ -134,47 +284,92 @@ export function Footer() {
                 ))}
 
                 {brands.length === 0 && (
-                    <li className="text-sm text-gray-500">Бренды загружаются...</li>
+                    <li className="text-sm text-gray-500">
+                      Бренды загружаются...
+                    </li>
                 )}
               </ul>
             </div>
 
             <div>
-              <h4 className="text-white mb-4">Контакты</h4>
-              <ul className="space-y-3">
-                {contact?.phone && (
-                    <li>
-                      <a
-                          href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}
-                          className="flex items-center gap-2 text-sm hover:text-green-500 transition-colors"
-                      >
-                        <Phone className="w-4 h-4" />
-                        {contact.phone}
-                      </a>
-                    </li>
-                )}
+              <h4 className="text-white mb-4">
+                Контакты
+              </h4>
 
-                {contact?.email && (
-                    <li>
-                      <a
-                          href={`mailto:${contact.email}`}
-                          className="flex items-center gap-2 text-sm hover:text-green-500 transition-colors"
-                      >
-                        <Mail className="w-4 h-4" />
-                        {contact.email}
-                      </a>
-                    </li>
-                )}
+              <ul className="space-y-3">
+                {contact?.phone &&
+                    phoneHref && (
+                        <li>
+                          <a
+                              href={
+                                phoneHref
+                              }
+                              onClick={(
+                                  event,
+                              ) => {
+                                event.preventDefault();
+
+                                trackContactAndNavigate(
+                                    'phone',
+                                    phoneHref,
+                                );
+                              }}
+                              className="flex items-center gap-2 text-sm hover:text-green-500 transition-colors"
+                          >
+                            <Phone className="w-4 h-4" />
+
+                            {
+                              contact.phone
+                            }
+                          </a>
+                        </li>
+                    )}
+
+                {contact?.email &&
+                    emailHref && (
+                        <li>
+                          <a
+                              href={
+                                emailHref
+                              }
+                              onClick={(
+                                  event,
+                              ) => {
+                                event.preventDefault();
+
+                                trackContactAndNavigate(
+                                    'email',
+                                    emailHref,
+                                );
+                              }}
+                              className="flex items-center gap-2 text-sm hover:text-green-500 transition-colors"
+                          >
+                            <Mail className="w-4 h-4" />
+
+                            {
+                              contact.email
+                            }
+                          </a>
+                        </li>
+                    )}
 
                 {contact?.whatsappUrl && (
                     <li>
                       <a
-                          href={contact.whatsappUrl}
+                          href={
+                            contact.whatsappUrl
+                          }
+                          onClick={() =>
+                              trackContactClick(
+                                  'whatsapp',
+                              )
+                          }
                           className="flex items-center gap-2 text-sm hover:text-green-500 transition-colors"
                           target="_blank"
                           rel="noopener noreferrer"
                       >
                         <MessageCircle className="w-4 h-4" />
+
                         WhatsApp
                       </a>
                     </li>
@@ -182,8 +377,21 @@ export function Footer() {
               </ul>
 
               <div className="mt-4 text-sm">
-                {contact?.addressShort && <p>{contact.addressShort}</p>}
-                {contact?.workingHours && <p className="mt-2">{contact.workingHours}</p>}
+                {contact?.addressShort && (
+                    <p>
+                      {
+                        contact.addressShort
+                      }
+                    </p>
+                )}
+
+                {contact?.workingHours && (
+                    <p className="mt-2">
+                      {
+                        contact.workingHours
+                      }
+                    </p>
+                )}
               </div>
             </div>
           </div>
@@ -191,18 +399,29 @@ export function Footer() {
           <div className="border-t border-gray-800 pt-8">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               <p className="text-sm">
-                © {currentYear} {settings?.legalName || 'ООО "Аграрис Текник"'}. Все права защищены.
+                © {currentYear}{' '}
+                {settings?.legalName ||
+                    'ООО "Аграрис Текник"'}
+                . Все права защищены.
               </p>
 
               <div className="flex gap-6 text-sm">
                 <a
-                    href={settings?.privacyPolicyUrl || '#'}
+                    href={
+                        settings?.privacyPolicyUrl ||
+                        '#'
+                    }
                     className="hover:text-green-500 transition-colors"
                 >
-                  Политика конфиденциальности
+                  Политика
+                  конфиденциальности
                 </a>
+
                 <a
-                    href={settings?.termsUrl || '#'}
+                    href={
+                        settings?.termsUrl ||
+                        '#'
+                    }
                     className="hover:text-green-500 transition-colors"
                 >
                   Условия использования

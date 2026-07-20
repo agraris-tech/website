@@ -48,6 +48,24 @@ function escapeHtml(value: string): string {
         .replaceAll("'", '&#039;');
 }
 
+/**
+ * В переменной LEAD_TO_EMAIL можно указывать:
+ *
+ * one@example.com
+ *
+ * или несколько адресов:
+ *
+ * one@example.com,two@example.com,three@example.com
+ *
+ * Дополнительно поддерживается разделитель через точку с запятой.
+ */
+function parseLeadRecipients(value: string): string[] {
+    return value
+        .split(/[,;]/)
+        .map((email) => email.trim())
+        .filter(Boolean);
+}
+
 export default {
     async fetch(request: Request): Promise<Response> {
         if (request.method !== 'POST') {
@@ -61,11 +79,11 @@ export default {
         }
 
         try {
-            if (
-                !process.env.RESEND_API_KEY ||
-                !process.env.LEAD_TO_EMAIL ||
-                !process.env.MAIL_FROM
-            ) {
+            const resendApiKey = process.env.RESEND_API_KEY;
+            const leadToEmail = process.env.LEAD_TO_EMAIL;
+            const mailFrom = process.env.MAIL_FROM;
+
+            if (!resendApiKey || !leadToEmail || !mailFrom) {
                 console.error(
                     'Missing RESEND_API_KEY, LEAD_TO_EMAIL or MAIL_FROM',
                 );
@@ -79,19 +97,72 @@ export default {
                 );
             }
 
-            const body = (await request.json()) as LeadRequest;
+            /*
+             * Получаем массив адресов из одной переменной
+             * LEAD_TO_EMAIL.
+             */
+            const leadRecipients =
+                parseLeadRecipients(leadToEmail);
 
-            const requestType = getString(body.requestType);
+            if (leadRecipients.length === 0) {
+                console.error(
+                    'LEAD_TO_EMAIL does not contain recipients',
+                );
+
+                return jsonResponse(
+                    {
+                        success: false,
+                        message:
+                            'Не указаны получатели заявок.',
+                    },
+                    500,
+                );
+            }
+
+            const invalidRecipients =
+                leadRecipients.filter(
+                    (recipient) =>
+                        !isValidEmail(recipient),
+                );
+
+            if (invalidRecipients.length > 0) {
+                console.error(
+                    'Invalid emails in LEAD_TO_EMAIL:',
+                    invalidRecipients,
+                );
+
+                return jsonResponse(
+                    {
+                        success: false,
+                        message:
+                            'Некорректно настроены адреса получателей.',
+                    },
+                    500,
+                );
+            }
+
+            const body =
+                (await request.json()) as LeadRequest;
+
+            const requestType = getString(
+                body.requestType,
+            );
+
             const name = getString(body.name);
             const phone = getString(body.phone);
             const email = getString(body.email);
             const comment = getString(body.comment);
-            const productTitle = getString(body.productTitle);
+
+            const productTitle = getString(
+                body.productTitle,
+            );
+
             const pageUrl = getString(body.pageUrl);
             const website = getString(body.website);
 
             /*
              * Honeypot.
+             *
              * Обычный пользователь это поле не видит.
              * Боту возвращаем формально успешный ответ,
              * но письмо и Google-конверсию не создаём.
@@ -116,7 +187,8 @@ export default {
                 return jsonResponse(
                     {
                         success: false,
-                        message: 'Укажите телефон или email.',
+                        message:
+                            'Укажите телефон или email.',
                     },
                     400,
                 );
@@ -126,7 +198,8 @@ export default {
                 return jsonResponse(
                     {
                         success: false,
-                        message: 'Проверьте номер телефона.',
+                        message:
+                            'Проверьте номер телефона.',
                     },
                     400,
                 );
@@ -150,7 +223,8 @@ export default {
                 return jsonResponse(
                     {
                         success: false,
-                        message: 'Слишком длинные данные формы.',
+                        message:
+                            'Слишком длинные данные формы.',
                     },
                     400,
                 );
@@ -161,16 +235,20 @@ export default {
             const requestTypeTitle =
                 requestType === 'product_offer'
                     ? 'Запрос предложения'
-                    : 'Заказ обратного звонка';
+                    : requestType === 'contact_form'
+                        ? 'Сообщение со страницы контактов'
+                        : 'Заказ обратного звонка';
 
             const subject =
-                requestType === 'product_offer' && productTitle
+                requestType === 'product_offer' &&
+                productTitle
                     ? `${requestTypeTitle}: ${productTitle}`
                     : `${requestTypeTitle} — Agraris Teknik`;
 
-            const createdAt = new Date().toLocaleString('ru-RU', {
-                timeZone: 'Europe/Minsk',
-            });
+            const createdAt =
+                new Date().toLocaleString('ru-RU', {
+                    timeZone: 'Europe/Minsk',
+                });
 
             const text = [
                 'Новая заявка Agraris Teknik',
@@ -210,6 +288,7 @@ export default {
                             <td style="border:1px solid #e5e7eb;">
                                 <strong>ID заявки</strong>
                             </td>
+
                             <td style="border:1px solid #e5e7eb;">
                                 ${escapeHtml(leadId)}
                             </td>
@@ -219,6 +298,7 @@ export default {
                             <td style="border:1px solid #e5e7eb;">
                                 <strong>Тип заявки</strong>
                             </td>
+
                             <td style="border:1px solid #e5e7eb;">
                                 ${escapeHtml(requestTypeTitle)}
                             </td>
@@ -228,6 +308,7 @@ export default {
                             <td style="border:1px solid #e5e7eb;">
                                 <strong>Имя</strong>
                             </td>
+
                             <td style="border:1px solid #e5e7eb;">
                                 ${escapeHtml(name)}
                             </td>
@@ -237,8 +318,11 @@ export default {
                             <td style="border:1px solid #e5e7eb;">
                                 <strong>Телефон</strong>
                             </td>
+
                             <td style="border:1px solid #e5e7eb;">
-                                ${escapeHtml(phone || 'Не указан')}
+                                ${escapeHtml(
+                phone || 'Не указан',
+            )}
                             </td>
                         </tr>
 
@@ -246,8 +330,11 @@ export default {
                             <td style="border:1px solid #e5e7eb;">
                                 <strong>Email</strong>
                             </td>
+
                             <td style="border:1px solid #e5e7eb;">
-                                ${escapeHtml(email || 'Не указан')}
+                                ${escapeHtml(
+                email || 'Не указан',
+            )}
                             </td>
                         </tr>
 
@@ -255,8 +342,12 @@ export default {
                             <td style="border:1px solid #e5e7eb;">
                                 <strong>Техника</strong>
                             </td>
+
                             <td style="border:1px solid #e5e7eb;">
-                                ${escapeHtml(productTitle || 'Не указана')}
+                                ${escapeHtml(
+                productTitle ||
+                'Не указана',
+            )}
                             </td>
                         </tr>
 
@@ -264,9 +355,11 @@ export default {
                             <td style="border:1px solid #e5e7eb;">
                                 <strong>Комментарий</strong>
                             </td>
+
                             <td style="border:1px solid #e5e7eb;">
-                                ${escapeHtml(comment || 'Не указан')
-                .replaceAll('\n', '<br>')}
+                                ${escapeHtml(
+                comment || 'Не указан',
+            ).replaceAll('\n', '<br>')}
                             </td>
                         </tr>
 
@@ -274,12 +367,19 @@ export default {
                             <td style="border:1px solid #e5e7eb;">
                                 <strong>Страница</strong>
                             </td>
+
                             <td style="border:1px solid #e5e7eb;">
                                 ${
                 pageUrl
-                    ? `<a href="${escapeHtml(pageUrl)}">
-                                            ${escapeHtml(pageUrl)}
-                                           </a>`
+                    ? `
+                                            <a href="${escapeHtml(
+                        pageUrl,
+                    )}">
+                                                ${escapeHtml(
+                        pageUrl,
+                    )}
+                                            </a>
+                                        `
                     : 'Не указана'
             }
                             </td>
@@ -289,6 +389,7 @@ export default {
                             <td style="border:1px solid #e5e7eb;">
                                 <strong>Дата</strong>
                             </td>
+
                             <td style="border:1px solid #e5e7eb;">
                                 ${escapeHtml(createdAt)}
                             </td>
@@ -297,27 +398,45 @@ export default {
                 </div>
             `;
 
-            const { data, error } = await resend.emails.send({
-                from: process.env.MAIL_FROM,
-                to: [process.env.LEAD_TO_EMAIL],
-                replyTo: email || undefined,
-                subject,
-                text,
-                html,
-                tags: [
-                    {
-                        name: 'lead_id',
-                        value: leadId,
-                    },
-                    {
-                        name: 'request_type',
-                        value:
-                            requestType === 'product_offer'
-                                ? 'product_offer'
-                                : 'callback',
-                    },
-                ],
-            });
+            const requestTypeTag =
+                requestType === 'product_offer'
+                    ? 'product_offer'
+                    : requestType === 'contact_form'
+                        ? 'contact_form'
+                        : 'callback';
+
+            const { data, error } =
+                await resend.emails.send({
+                    from: mailFrom,
+
+                    /*
+                     * Одна заявка отправляется сразу
+                     * на все адреса из LEAD_TO_EMAIL.
+                     */
+                    to: leadRecipients,
+
+                    /*
+                     * Если клиент указал email,
+                     * при нажатии «Ответить» письмо
+                     * отправится непосредственно клиенту.
+                     */
+                    replyTo: email || undefined,
+
+                    subject,
+                    text,
+                    html,
+
+                    tags: [
+                        {
+                            name: 'lead_id',
+                            value: leadId,
+                        },
+                        {
+                            name: 'request_type',
+                            value: requestTypeTag,
+                        },
+                    ],
+                });
 
             if (error) {
                 console.error('Resend error:', error);
@@ -335,6 +454,7 @@ export default {
             console.log('Lead email sent:', {
                 leadId,
                 emailId: data?.id,
+                recipients: leadRecipients,
             });
 
             return jsonResponse(
