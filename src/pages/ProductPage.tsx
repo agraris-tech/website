@@ -420,8 +420,7 @@ export function ProductPage() {
                                                 <div
                                                     key={key}
                                                     className="
-                    grid
-                    grid-cols-[200px_minmax(0,1fr)]
+                    flex
                     items-start
                     gap-x-6
                     py-4
@@ -430,19 +429,28 @@ export function ProductPage() {
                     last:border-0
                 "
                                                 >
-                                                    <div className="text-gray-600 leading-7">
+                                                    <div
+                                                        className="
+                        w-[42%]
+                        max-w-[240px]
+                        shrink-0
+                        text-gray-600
+                        leading-7
+                    "
+                                                    >
                                                         {key}:
                                                     </div>
 
                                                     <div
                                                         className="
                         min-w-0
+                        flex-1
+                        text-right
                         text-gray-900
                         leading-7
-                        text-right
-                        break-words
                         whitespace-normal
-                        justify-self-end
+                        break-words
+                        [overflow-wrap:anywhere]
                     "
                                                     >
                                                         {String(value)}
@@ -479,7 +487,7 @@ export function ProductPage() {
 
                         <Card>
                             <CardContent className="p-6">
-                            <div className="flex items-start gap-4">
+                                <div className="flex items-start gap-4">
                                     <div className="p-3 bg-blue-100 rounded-lg">
                                         <CreditCard className="w-6 h-6 text-blue-700"/>
                                     </div>
