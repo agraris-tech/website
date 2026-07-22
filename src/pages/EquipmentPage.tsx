@@ -433,6 +433,7 @@ export function EquipmentPage() {
                     </div>
                 </section>
 
+
                 <Equipment/>
 
                 <section className="py-20 bg-gray-50">
