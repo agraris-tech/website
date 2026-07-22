@@ -435,27 +435,144 @@ export function EquipmentPage() {
 
                 <Equipment/>
 
-                <section className="py-20 bg-gray-50">
+                <section className="bg-gray-50 py-12 md:py-20">
                     <div className="container mx-auto px-4">
                         <div ref={catalogTopRef}>
-                            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                                <TabsList
-                                    className="grid w-full max-w-5xl mx-auto mb-12"
-                                    style={{gridTemplateColumns: `repeat(${rootCategories.length + 1}, minmax(0, 1fr))`}}
+                            <Tabs
+                                value={activeTab}
+                                onValueChange={handleTabChange}
+                                className="w-full"
+                            >
+                                {/* Мобильные категории */}
+                                <div
+                                    className="
+              -mx-4
+              mb-8
+              overflow-x-auto
+              px-4
+              pb-2
+              [scrollbar-width:none]
+              [&::-webkit-scrollbar]:hidden
+              md:hidden
+            "
                                 >
-                                    <TabsTrigger value="all">Все</TabsTrigger>
+                                    <TabsList
+                                        className="
+                flex
+                h-auto
+                w-max
+                min-w-full
+                justify-start
+                gap-2
+                rounded-none
+                bg-transparent
+                p-0
+              "
+                                    >
+                                        <TabsTrigger
+                                            value="all"
+                                            className="
+                  min-w-[90px]
+                  shrink-0
+                  whitespace-nowrap
+                  rounded-full
+                  border
+                  border-gray-200
+                  bg-white
+                  px-4
+                  py-2.5
+                  text-sm
+                  font-medium
+                  text-gray-700
+                  shadow-sm
+                  data-[state=active]:border-green-700
+                  data-[state=active]:bg-green-700
+                  data-[state=active]:text-white
+                "
+                                        >
+                                            Все
+                                        </TabsTrigger>
+
+                                        {rootCategories.map((category) => (
+                                            <TabsTrigger
+                                                key={category.documentId}
+                                                value={category.slug}
+                                                className="
+                      shrink-0
+                      whitespace-nowrap
+                      rounded-full
+                      border
+                      border-gray-200
+                      bg-white
+                      px-4
+                      py-2.5
+                      text-sm
+                      font-medium
+                      text-gray-700
+                      shadow-sm
+                      data-[state=active]:border-green-700
+                      data-[state=active]:bg-green-700
+                      data-[state=active]:text-white
+                    "
+                                            >
+                                                {getCategoryTabLabel(category)}
+                                            </TabsTrigger>
+                                        ))}
+                                    </TabsList>
+                                </div>
+
+                                {/* Десктопные категории */}
+                                <TabsList
+                                    className="
+              mx-auto
+              mb-12
+              hidden
+              h-auto
+              w-full
+              max-w-5xl
+              md:grid
+            "
+                                    style={{
+                                        gridTemplateColumns:
+                                            `repeat(${rootCategories.length + 1}, minmax(0, 1fr))`,
+                                    }}
+                                >
+                                    <TabsTrigger
+                                        value="all"
+                                        className="
+                min-w-0
+                whitespace-normal
+                px-3
+                py-2
+                text-center
+                text-sm
+                leading-tight
+              "
+                                    >
+                                        Все
+                                    </TabsTrigger>
 
                                     {rootCategories.map((category) => (
-                                        <TabsTrigger key={category.documentId} value={category.slug}>
-
+                                        <TabsTrigger
+                                            key={category.documentId}
+                                            value={category.slug}
+                                            className="
+                    min-w-0
+                    whitespace-normal
+                    px-3
+                    py-2
+                    text-center
+                    text-sm
+                    leading-tight
+                  "
+                                        >
                                             {getCategoryTabLabel(category)}
                                         </TabsTrigger>
                                     ))}
                                 </TabsList>
 
                                 <TabsContent value={activeTab}>
-
-                                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 lg:gap-8">
                                         {renderProducts()}
                                     </div>
                                 </TabsContent>
@@ -463,23 +580,39 @@ export function EquipmentPage() {
                         </div>
 
                         {pageCount > 1 && (
-                            <div className="flex justify-center items-center gap-3 mt-4">
+                            <div
+                                className="
+              mt-6
+              flex
+              flex-wrap
+              items-center
+              justify-center
+              gap-2
+              sm:gap-3
+            "
+                            >
                                 <Button
                                     variant="outline"
+                                    size="sm"
                                     disabled={page === 1}
-                                    onClick={() => setPage((prev) => prev - 1)}
+                                    onClick={() =>
+                                        setPage((prev) => prev - 1)
+                                    }
                                 >
                                     Назад
                                 </Button>
 
-                                <span className="text-sm text-gray-600">
-          Страница {page} из {pageCount}
-        </span>
+                                <span className="px-2 text-xs text-gray-600 sm:text-sm">
+            Страница {page} из {pageCount}
+          </span>
 
                                 <Button
                                     variant="outline"
+                                    size="sm"
                                     disabled={page === pageCount}
-                                    onClick={() => setPage((prev) => prev + 1)}
+                                    onClick={() =>
+                                        setPage((prev) => prev + 1)
+                                    }
                                 >
                                     Вперёд
                                 </Button>

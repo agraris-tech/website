@@ -133,9 +133,27 @@ export function Header() {
   return (
       <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-4">
-          <div className="border-b border-gray-100 py-2">
-            <div className="flex justify-between items-center">
-              <div className="flex gap-6">
+          <div className="border-b border-gray-100 py-3">
+            <div
+                className="
+        grid
+        gap-3
+        lg:grid-cols-[minmax(0,1fr)_auto]
+        lg:items-center
+      "
+            >
+              {/* Телефон и email */}
+              <div
+                  className="
+          grid
+          gap-2
+          sm:grid-cols-2
+          lg:flex
+          lg:flex-wrap
+          lg:items-center
+          lg:gap-x-6
+        "
+              >
                 {contact?.phone && phoneHref && (
                     <a
                         href={phoneHref}
@@ -147,13 +165,23 @@ export function Header() {
                               phoneHref,
                           );
                         }}
-                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-green-700 transition-colors"
+                        className="
+                flex
+                min-w-0
+                items-center
+                gap-2
+                text-[13px]
+                text-gray-600
+                transition-colors
+                hover:text-green-700
+                sm:text-sm
+              "
                     >
-                      <Phone className="w-4 h-4" />
+                      <Phone className="h-4 w-4 shrink-0"/>
 
-                      <span>
-                                        {contact.phone}
-                                    </span>
+                      <span className="whitespace-nowrap">
+              {contact.phone}
+            </span>
                     </a>
                 )}
 
@@ -168,20 +196,56 @@ export function Header() {
                               emailHref,
                           );
                         }}
-                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-green-700 transition-colors"
+                        className="
+                flex
+                min-w-0
+                items-center
+                gap-2
+                text-[13px]
+                text-gray-600
+                transition-colors
+                hover:text-green-700
+                sm:text-sm
+              "
                     >
-                      <Mail className="w-4 h-4" />
+                      <Mail className="h-4 w-4 shrink-0"/>
 
-                      <span>
-                                        {contact.email}
-                                    </span>
+                      <span
+                          className="
+                  min-w-0
+                  break-all
+                  sm:break-normal
+                "
+                      >
+              {contact.email}
+            </span>
                     </a>
                 )}
               </div>
 
-              <div className="text-sm text-gray-600">
-                {contact?.workingHours || ''}
-              </div>
+              {/* График работы */}
+              {contact?.workingHours && (
+                  <div
+                      className="
+              rounded-lg
+              bg-gray-50
+              px-3
+              py-2
+              text-center
+              text-xs
+              leading-5
+              text-gray-600
+              sm:text-sm
+              lg:bg-transparent
+              lg:px-0
+              lg:py-0
+              lg:text-right
+              lg:whitespace-pre-line
+            "
+                  >
+                    {contact.workingHours}
+                  </div>
+              )}
             </div>
           </div>
 
@@ -238,7 +302,7 @@ export function Header() {
                           >
                             {item.label}
 
-                            <ChevronDown className="w-4 h-4" />
+                            <ChevronDown className="w-4 h-4"/>
                           </Link>
 
                           {equipmentMenuOpen && (
@@ -358,9 +422,9 @@ export function Header() {
                   }
               >
                 {mobileMenuOpen ? (
-                    <X className="w-6 h-6" />
+                    <X className="w-6 h-6"/>
                 ) : (
-                    <Menu className="w-6 h-6" />
+                    <Menu className="w-6 h-6"/>
                 )}
               </button>
             </div>
