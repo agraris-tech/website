@@ -136,57 +136,52 @@ export function Header() {
           <div className="border-b border-gray-100 py-2">
             <div className="flex justify-between items-center">
               <div className="flex gap-6">
-                {contact?.phone && (
-                    {contact?.phone && phoneHref && (
-                        <a
-                            href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}
-                            href={phoneHref}
-                            onClick={(event) => {
-                              event.preventDefault();
+                {contact?.phone && phoneHref && (
+                    <a
+                        href={phoneHref}
+                        onClick={(event) => {
+                          event.preventDefault();
 
-                              trackContactAndNavigate(
-                                  'phone',
-                                  phoneHref,
-                              );
-                            }}
-                            className="flex items-center gap-2 text-sm text-gray-600 hover:text-green-700 transition-colors"
-                        >
-                          <Phone className="w-4 h-4"/>
-                          <span>{contact.phone}</span>
+                          trackContactAndNavigate(
+                              'phone',
+                              phoneHref,
+                          );
+                        }}
+                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-green-700 transition-colors"
+                    >
+                      <Phone className="w-4 h-4"/>
 
-                          <span>
-                                        {contact.phone}
-                                    </span>
-                        </a>
-                    )}
+                      <span>
+              {contact.phone}
+            </span>
+                    </a>
+                )}
 
-                {contact?.email && (
                 {contact?.email && emailHref && (
-                  <a
-                  href={`mailto:${contact.email}`}
-                   href={emailHref}
-                   onClick={(event) => {
-                     event.preventDefault();
+                    <a
+                        href={emailHref}
+                        onClick={(event) => {
+                          event.preventDefault();
 
-                     trackContactAndNavigate(
-                         'email',
-                         emailHref,
-                     );
-                   }}
-                   className="flex items-center gap-2 text-sm text-gray-600 hover:text-green-700 transition-colors"
-              >
-                <Mail className="w-4 h-4"/>
-                <span>{contact.email}</span>
+                          trackContactAndNavigate(
+                              'email',
+                              emailHref,
+                          );
+                        }}
+                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-green-700 transition-colors"
+                    >
+                      <Mail className="w-4 h-4"/>
 
-                <span>
-                                        {contact.email}
-                                    </span>
-              </a>
-              )}
-            </div>
+                      <span>
+              {contact.email}
+            </span>
+                    </a>
+                )}
+              </div>
 
-            <div className="text-sm text-gray-600">
-              {contact?.workingHours || ''}
+              <div className="text-sm text-gray-600">
+                {contact?.workingHours || ''}
+              </div>
             </div>
           </div>
         </div>
