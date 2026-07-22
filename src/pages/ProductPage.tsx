@@ -39,6 +39,9 @@ type Product = {
     slug: string;
     description: string;
     shortDescription: string;
+    metaTitle?: string | null;
+    metaDescription?: string | null;
+    searchKeywords?: string | null;
     priceBase: number | null;
     baseCurrency: string;
     availability: string;
@@ -411,19 +414,44 @@ export function ProductPage() {
                                 <CardContent className="p-6">
                                     <h3 className="text-xl mb-4">Технические характеристики</h3>
 
-                                    <div className="space-y-3">
+                                    <div>
                                         {product.specs && Object.keys(product.specs).length > 0 ? (
                                             Object.entries(product.specs).map(([key, value]) => (
                                                 <div
                                                     key={key}
-                                                    className="flex justify-between py-2 border-b border-gray-100 last:border-0"
+                                                    className="
+                    grid
+                    grid-cols-1
+                    sm:grid-cols-[minmax(160px,0.8fr)_minmax(0,1.2fr)]
+                    items-start
+                    gap-1
+                    sm:gap-6
+                    py-4
+                    border-b
+                    border-gray-100
+                    last:border-0
+                "
                                                 >
-                                                    <span className="text-gray-600">{key}:</span>
-                                                    <span className="text-gray-900">{value}</span>
+                                                    <div className="min-w-0 text-gray-600 leading-6">
+                                                        {key}:
+                                                    </div>
+
+                                                    <div
+                                                        className="
+                        min-w-0
+                        text-gray-900
+                        leading-6
+                        break-words
+                        whitespace-normal
+                        sm:text-right
+                    "
+                                                    >
+                                                        {String(value)}
+                                                    </div>
                                                 </div>
                                             ))
                                         ) : (
-                                            <div className="text-gray-500">
+                                            <div className="py-2 text-gray-500">
                                                 Характеристики пока не заполнены.
                                             </div>
                                         )}
@@ -526,6 +554,22 @@ export function ProductPage() {
                                             <Separator/>
                                         </>
                                     )}
+                                    {product.year && (
+                                        <>
+                                            <div>
+                                                <div className="text-sm text-gray-500 mb-1">
+                                                    Год выпуска
+                                                </div>
+
+                                                <div className="text-lg">
+                                                    {product.year}
+                                                </div>
+                                            </div>
+
+                                            <Separator/>
+                                        </>
+                                    )}
+
 
                                     {/* Артикул */}
                                     {product.sku && (

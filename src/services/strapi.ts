@@ -126,6 +126,14 @@ export async function getProductBySlug(slug: string) {
         sku: item.sku ?? "",
         saleType: item.saleType ?? "",
         specs: item.specs ?? {},
+        metaTitle:
+            item.metaTitle ?? null,
+
+        metaDescription:
+            item.metaDescription ?? null,
+
+        searchKeywords:
+            item.searchKeywords ?? null,
         brand: item.brand
             ? {
                 id: item.brand.id,

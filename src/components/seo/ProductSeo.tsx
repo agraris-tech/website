@@ -10,35 +10,45 @@ import {
     truncateText,
 } from './seoConfig';
 
+type ProductSeoProduct = {
+    documentId?: string;
+
+    title: string;
+    slug: string;
+
+    description?: string;
+    shortDescription?: string;
+
+    /*
+     * Эти поля уже существуют в Strapi.
+     * Новые поля в Content-Type создавать не нужно.
+     */
+    metaTitle?: string | null;
+    metaDescription?: string | null;
+    searchKeywords?: string | null;
+
+    availability?: string;
+
+    type: 'new' | 'used';
+
+    year?: number | null;
+    manufacturer?: string;
+    sku?: string;
+
+    brand?: {
+        name: string;
+    } | null;
+
+    category?: {
+        name: string;
+        slug?: string;
+    } | null;
+
+    images?: string[];
+};
+
 type ProductSeoProps = {
-    product: {
-        documentId?: string;
-
-        title: string;
-        slug: string;
-
-        description?: string;
-        shortDescription?: string;
-
-        availability?: string;
-
-        type: 'new' | 'used';
-
-        year?: number | null;
-        manufacturer?: string;
-        sku?: string;
-
-        brand?: {
-            name: string;
-        } | null;
-
-        category?: {
-            name: string;
-            slug?: string;
-        } | null;
-
-        images?: string[];
-    };
+    product: ProductSeoProduct;
 
     /*
      * Цена и валюта приходят из уже
@@ -48,6 +58,163 @@ type ProductSeoProps = {
     displayCurrency: string;
 };
 
+/*
+ * Убирает HTML, лишние переносы
+ * и пробелы из SEO-полей.
+ */
+function cleanText(
+    value?: string | null,
+): string {
+    return stripHtml(value || '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+/*
+ * Преобразует slug в обычный текст.
+ *
+ * Например:
+ * avtomaticheskij-zapolnitel-grimme-gbf-2023
+ *
+ * станет:
+ * Avtomaticheskij zapolnitel grimme gbf 2023
+ */
+function slugToText(slug: string): string {
+    let decodedSlug = slug;
+
+    try {
+        decodedSlug =
+            decodeURIComponent(slug);
+    } catch {
+        decodedSlug = slug;
+    }
+
+    const text = decodedSlug
+        .replace(/[-_]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    if (!text) {
+        return '';
+    }
+
+    return (
+        text.charAt(0).toUpperCase() +
+        text.slice(1)
+    );
+}
+
+/*
+ * Удаляет дубли ключевых фраз
+ * и приводит разделители к запятым.
+ */
+function normalizeKeywords(
+    value?: string | null,
+): string {
+    if (!value) {
+        return '';
+    }
+
+    const keywords = value
+        .split(/[,;\n]+/)
+        .map((keyword) =>
+            cleanText(keyword),
+        )
+        .filter(Boolean);
+
+    const uniqueKeywords: string[] = [];
+    const usedKeywords =
+        new Set<string>();
+
+    for (const keyword of keywords) {
+        const normalized =
+            keyword.toLowerCase();
+
+        if (usedKeywords.has(normalized)) {
+            continue;
+        }
+
+        usedKeywords.add(normalized);
+        uniqueKeywords.push(keyword);
+    }
+
+    /*
+     * Не создаём слишком длинный
+     * meta keywords.
+     */
+    return uniqueKeywords
+        .slice(0, 15)
+        .join(', ');
+}
+
+/*
+ * Автоматическое создание ключевых слов,
+ * когда searchKeywords не заполнен в Strapi.
+ */
+function buildGeneratedKeywords(
+    product: ProductSeoProduct,
+    productSeoName: string,
+    countryName: string,
+    countryLocative: string,
+): string {
+    const productName =
+        cleanText(product.title) ||
+        slugToText(product.slug) ||
+        'Сельскохозяйственная техника';
+
+    const slugText =
+        slugToText(product.slug);
+
+    const brandName =
+        cleanText(product.brand?.name);
+
+    const manufacturer =
+        cleanText(product.manufacturer);
+
+    const categoryName =
+        cleanText(product.category?.name);
+
+    const year =
+        product.year
+            ? String(product.year)
+            : '';
+
+    const conditionKeyword =
+        product.type === 'used'
+            ? `${productName} б/у`
+            : `${productName} новая`;
+
+    const generatedKeywords = [
+        productSeoName,
+        productName,
+        slugText,
+
+        brandName,
+        manufacturer,
+        categoryName,
+
+        year
+            ? `${productName} ${year}`
+            : '',
+
+        `${productName} купить`,
+        `${productName} цена`,
+        `${productName} купить в ${countryLocative}`,
+
+        conditionKeyword,
+
+        categoryName
+            ? `${categoryName} в ${countryName}`
+            : '',
+    ]
+        .filter(Boolean)
+        .join(', ');
+
+    return normalizeKeywords(
+        generatedKeywords,
+    );
+}
+
 function getSchemaAvailability(
     availability?: string,
 ): string | undefined {
@@ -55,14 +222,29 @@ function getSchemaAvailability(
         return undefined;
     }
 
-    const normalized =
-        availability.toLowerCase();
+    /*
+     * Благодаря замене подчёркиваний
+     * корректно распознаются:
+     *
+     * in_stock
+     * out_of_stock
+     * pre_order
+     */
+    const normalized = availability
+        .toLowerCase()
+        .replace(/[_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 
     if (
-        normalized.includes('нет в наличии') ||
+        normalized.includes(
+            'нет в наличии',
+        ) ||
         normalized.includes('продан') ||
         normalized.includes('продано') ||
-        normalized.includes('out of stock')
+        normalized.includes(
+            'out of stock',
+        )
     ) {
         return 'https://schema.org/OutOfStock';
     }
@@ -70,7 +252,8 @@ function getSchemaAvailability(
     if (
         normalized.includes('под заказ') ||
         normalized.includes('предзаказ') ||
-        normalized.includes('preorder')
+        normalized.includes('preorder') ||
+        normalized.includes('pre order')
     ) {
         return 'https://schema.org/PreOrder';
     }
@@ -96,51 +279,124 @@ export default function ProductSeo({
     const pathname =
         `/catalog/${product.slug}`;
 
-    const canonicalUrl = buildRegionalUrl(
-        region,
-        pathname,
-    );
+    const canonicalUrl =
+        buildRegionalUrl(
+            region,
+            pathname,
+        );
 
     const alternateUrls =
         getAlternateUrls(pathname);
 
+    /*
+     * Сначала используем title.
+     * Если title по какой-либо причине пустой,
+     * берём текст из slug.
+     */
+    const baseProductName =
+        cleanText(product.title) ||
+        slugToText(product.slug) ||
+        'Сельскохозяйственная техника';
+
     const conditionSuffix =
         product.type === 'used' &&
-        !/б\/?\s*у|бывш/i.test(product.title)
+        !/б\/?\s*у|бывш/i.test(
+            baseProductName,
+        )
             ? ' б/у'
             : '';
 
     const yearSuffix =
         product.year &&
-        !product.title.includes(
+        !baseProductName.includes(
             String(product.year),
         )
             ? ` ${product.year} г.`
             : '';
 
     const productSeoName =
-        `${product.title}` +
+        `${baseProductName}` +
         `${conditionSuffix}` +
         `${yearSuffix}`;
 
-    const seoTitle =
+    /*
+     * Старая автоматическая логика.
+     * Используется только при пустом
+     * metaTitle в Strapi.
+     */
+    const generatedSeoTitle =
         `${productSeoName} — купить в ` +
         `${region.countryLocative} | AGRARIS`;
 
-    const plainDescription = stripHtml(
-        product.shortDescription ||
-        product.description ||
-        '',
-    );
+    /*
+     * metaTitle из Strapi имеет приоритет.
+     */
+    const customMetaTitle =
+        cleanText(product.metaTitle);
 
-    const seoDescription = truncateText(
-        `Купить ${productSeoName} в ` +
-        `${region.countryLocative}. ` +
-        `${
-            plainDescription ||
-            'Фото, технические характеристики, цена и условия поставки.'
-        } AGRARIS.`,
-    );
+    const seoTitle =
+        customMetaTitle ||
+        generatedSeoTitle;
+
+    const plainDescription =
+        cleanText(
+            product.shortDescription ||
+            product.description ||
+            '',
+        );
+
+    /*
+     * Старая автоматическая логика.
+     * Используется только при пустом
+     * metaDescription.
+     */
+    const generatedSeoDescription =
+        truncateText(
+            `Купить ${productSeoName} в ` +
+            `${region.countryLocative}. ` +
+            `${
+                plainDescription ||
+                'Фото, технические характеристики, цена и условия поставки.'
+            } AGRARIS.`,
+        );
+
+    /*
+     * metaDescription из Strapi
+     * имеет приоритет.
+     */
+    const customMetaDescription =
+        cleanText(
+            product.metaDescription,
+        );
+
+    const seoDescription =
+        customMetaDescription ||
+        generatedSeoDescription;
+
+    /*
+     * Сначала пытаемся получить
+     * searchKeywords из Strapi.
+     */
+    const customSearchKeywords =
+        normalizeKeywords(
+            product.searchKeywords,
+        );
+
+    /*
+     * Если поле пустое — ключевые слова
+     * формируются автоматически.
+     */
+    const generatedSearchKeywords =
+        buildGeneratedKeywords(
+            product,
+            productSeoName,
+            region.countryName,
+            region.countryLocative,
+        );
+
+    const seoKeywords =
+        customSearchKeywords ||
+        generatedSearchKeywords;
 
     const imageUrls = (
         product.images || []
@@ -177,12 +433,18 @@ export default function ProductSeo({
 
         '@id': `${canonicalUrl}#product`,
 
-        name: product.title,
+        name: baseProductName,
         url: canonicalUrl,
 
         description: seoDescription,
 
         itemCondition,
+
+        ...(seoKeywords
+            ? {
+                keywords: seoKeywords,
+            }
+            : {}),
 
         ...(imageUrls.length > 0
             ? {
@@ -203,6 +465,7 @@ export default function ProductSeo({
             ? {
                 brand: {
                     '@type': 'Brand',
+
                     name:
                     product.brand.name,
                 },
@@ -248,13 +511,19 @@ export default function ProductSeo({
             itemCondition,
 
             seller: {
-                '@type': 'Organization',
+                '@type':
+                    'Organization',
 
-                name: region.siteName,
-                url: region.baseUrl,
+                name:
+                region.siteName,
+
+                url:
+                region.baseUrl,
 
                 areaServed: {
-                    '@type': 'Country',
+                    '@type':
+                        'Country',
+
                     name:
                     region.countryName,
                 },
@@ -266,17 +535,20 @@ export default function ProductSeo({
                 schemaAvailability;
         }
 
-        productSchema.offers = offer;
+        productSchema.offers =
+            offer;
     }
 
     const structuredData = {
-        '@context': 'https://schema.org',
+        '@context':
+            'https://schema.org',
 
         '@graph': [
             productSchema,
 
             {
-                '@type': 'BreadcrumbList',
+                '@type':
+                    'BreadcrumbList',
 
                 '@id':
                     `${canonicalUrl}` +
@@ -284,7 +556,9 @@ export default function ProductSeo({
 
                 itemListElement: [
                     {
-                        '@type': 'ListItem',
+                        '@type':
+                            'ListItem',
+
                         position: 1,
                         name: 'Главная',
 
@@ -293,7 +567,9 @@ export default function ProductSeo({
                     },
 
                     {
-                        '@type': 'ListItem',
+                        '@type':
+                            'ListItem',
+
                         position: 2,
                         name: 'Каталог',
 
@@ -303,11 +579,16 @@ export default function ProductSeo({
                     },
 
                     {
-                        '@type': 'ListItem',
+                        '@type':
+                            'ListItem',
+
                         position: 3,
 
-                        name: product.title,
-                        item: canonicalUrl,
+                        name:
+                        baseProductName,
+
+                        item:
+                        canonicalUrl,
                     },
                 ],
             },
@@ -318,12 +599,21 @@ export default function ProductSeo({
         <Helmet prioritizeSeoTags>
             <html lang={region.htmlLang}/>
 
-            <title>{seoTitle}</title>
+            <title>
+                {seoTitle}
+            </title>
 
             <meta
                 name="description"
                 content={seoDescription}
             />
+
+            {seoKeywords && (
+                <meta
+                    name="keywords"
+                    content={seoKeywords}
+                />
+            )}
 
             <meta
                 name="robots"
@@ -345,7 +635,9 @@ export default function ProductSeo({
                         hrefLang={
                             alternate.hrefLang
                         }
-                        href={alternate.href}
+                        href={
+                            alternate.href
+                        }
                     />
                 ),
             )}
@@ -384,12 +676,16 @@ export default function ProductSeo({
                 <>
                     <meta
                         property="og:image"
-                        content={primaryImage}
+                        content={
+                            primaryImage
+                        }
                     />
 
                     <meta
                         property="og:image:alt"
-                        content={product.title}
+                        content={
+                            baseProductName
+                        }
                     />
                 </>
             )}
@@ -399,7 +695,9 @@ export default function ProductSeo({
                     <meta
                         property="product:price:amount"
                         content={String(
-                            displayPrice.toFixed(2),
+                            displayPrice.toFixed(
+                                2,
+                            ),
                         )}
                     />
 
@@ -430,7 +728,9 @@ export default function ProductSeo({
             {primaryImage && (
                 <meta
                     name="twitter:image"
-                    content={primaryImage}
+                    content={
+                        primaryImage
+                    }
                 />
             )}
 
