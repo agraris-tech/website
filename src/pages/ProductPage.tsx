@@ -421,18 +421,16 @@ export function ProductPage() {
                                                     key={key}
                                                     className="
                     grid
-                    grid-cols-1
-                    sm:grid-cols-[minmax(160px,0.8fr)_minmax(0,1.2fr)]
+                    grid-cols-[200px_minmax(0,1fr)]
                     items-start
-                    gap-1
-                    sm:gap-6
+                    gap-x-6
                     py-4
                     border-b
                     border-gray-100
                     last:border-0
                 "
                                                 >
-                                                    <div className="min-w-0 text-gray-600 leading-6">
+                                                    <div className="text-gray-600 leading-7">
                                                         {key}:
                                                     </div>
 
@@ -440,10 +438,11 @@ export function ProductPage() {
                                                         className="
                         min-w-0
                         text-gray-900
-                        leading-6
+                        leading-7
+                        text-right
                         break-words
                         whitespace-normal
-                        sm:text-right
+                        justify-self-end
                     "
                                                     >
                                                         {String(value)}
@@ -480,7 +479,7 @@ export function ProductPage() {
 
                         <Card>
                             <CardContent className="p-6">
-                                <div className="flex items-start gap-4">
+                            <div className="flex items-start gap-4">
                                     <div className="p-3 bg-blue-100 rounded-lg">
                                         <CreditCard className="w-6 h-6 text-blue-700"/>
                                     </div>
