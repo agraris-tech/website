@@ -419,40 +419,35 @@ export function ProductPage() {
                                             Object.entries(product.specs).map(([key, value]) => (
                                                 <div
                                                     key={key}
-                                                    className="
-                    items-start
-                    py-4
-                    border-b
-                    border-gray-100
-                    last:border-0
-                "
+                                                    className="py-4 border-b border-gray-100 last:border-0"
                                                     style={{
-                                                        display: 'grid',
-                                                        gridTemplateColumns: 'minmax(180px, 40%) minmax(0, 60%)',
-                                                        columnGap: '32px',
+                                                        display: 'flex',
+                                                        alignItems: 'flex-start',
+                                                        gap: '24px',
                                                     }}
                                                 >
                                                     <div
-                                                        className="
-                        min-w-0
-                        text-gray-600
-                        leading-7
-                        break-words
-                    "
+                                                        className="text-gray-600 leading-7"
+                                                        style={{
+                                                            flex: '0 1 42%',
+                                                            minWidth: 0,
+                                                            overflowWrap: 'anywhere',
+                                                        }}
                                                     >
                                                         {key}:
                                                     </div>
 
                                                     <div
-                                                        className="
-                        min-w-0
-                        text-right
-                        text-gray-900
-                        leading-7
-                        whitespace-normal
-                        break-words
-                        [overflow-wrap:anywhere]
-                    "
+                                                        className="text-gray-900 leading-7"
+                                                        style={{
+                                                            flex: '1 1 58%',
+                                                            minWidth: 0,
+                                                            marginLeft: 'auto',
+                                                            textAlign: 'right',
+                                                            whiteSpace: 'normal',
+                                                            overflowWrap: 'anywhere',
+                                                            wordBreak: 'normal',
+                                                        }}
                                                     >
                                                         {String(value)}
                                                     </div>
