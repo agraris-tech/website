@@ -184,7 +184,6 @@ export function Header() {
               </div>
             </div>
           </div>
-        </div>
 
         <div className="py-4">
           <div className="flex justify-between items-center">
