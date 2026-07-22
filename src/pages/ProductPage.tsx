@@ -420,22 +420,24 @@ export function ProductPage() {
                                                 <div
                                                     key={key}
                                                     className="
-                    flex
                     items-start
-                    gap-x-6
                     py-4
                     border-b
                     border-gray-100
                     last:border-0
                 "
+                                                    style={{
+                                                        display: 'grid',
+                                                        gridTemplateColumns: 'minmax(180px, 40%) minmax(0, 60%)',
+                                                        columnGap: '32px',
+                                                    }}
                                                 >
                                                     <div
                                                         className="
-                        w-[42%]
-                        max-w-[240px]
-                        shrink-0
+                        min-w-0
                         text-gray-600
                         leading-7
+                        break-words
                     "
                                                     >
                                                         {key}:
@@ -444,7 +446,6 @@ export function ProductPage() {
                                                     <div
                                                         className="
                         min-w-0
-                        flex-1
                         text-right
                         text-gray-900
                         leading-7
