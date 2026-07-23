@@ -3125,6 +3125,47 @@ html {
   color: #374151;
 }
 
+.header-top-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  row-gap: 8px;
+}
+
+.header-contacts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 8px;
+  min-width: 0;
+}
+
+.header-working-hours {
+  margin-left: auto;
+  color: rgb(75 85 99);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 620px) {
+  .header-contacts {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .header-working-hours {
+    width: 100%;
+    margin-left: 0;
+    padding-top: 2px;
+    text-align: center;
+    white-space: normal;
+  }
+}
+
 button,
 a {
   cursor: pointer;

@@ -439,24 +439,80 @@ export function EquipmentPage() {
                 <section className="py-20 bg-gray-50">
                     <div className="container mx-auto px-4">
                         <div ref={catalogTopRef}>
-                            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+                            <Tabs
+                                value={activeTab}
+                                onValueChange={handleTabChange}
+                                className="w-full"
+                            >
                                 <TabsList
-                                    className="grid w-full max-w-5xl mx-auto mb-12"
-                                    style={{gridTemplateColumns: `repeat(${rootCategories.length + 1}, minmax(0, 1fr))`}}
+                                    className="mx-auto mb-12 w-full max-w-5xl p-2"
+                                    style={{
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        height: 'auto',
+                                        overflow: 'visible',
+                                        borderRadius: '16px',
+                                        backgroundColor: '#f3f4f6',
+                                    }}
                                 >
-                                    <TabsTrigger value="all">Все</TabsTrigger>
+                                    <TabsTrigger
+                                        value="all"
+                                        className="h-auto whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200"
+                                        style={{
+                                            flex: '0 0 auto',
+                                            backgroundColor:
+                                                activeTab === 'all'
+                                                    ? '#15803d'
+                                                    : 'transparent',
+                                            color:
+                                                activeTab === 'all'
+                                                    ? '#ffffff'
+                                                    : '#111827',
+                                            boxShadow:
+                                                activeTab === 'all'
+                                                    ? '0 2px 6px rgba(0, 0, 0, 0.12)'
+                                                    : 'none',
+                                        }}
+                                    >
+                                        Все
+                                    </TabsTrigger>
 
-                                    {rootCategories.map((category) => (
-                                        <TabsTrigger key={category.documentId} value={category.slug}>
+                                    {rootCategories.map((category) => {
+                                        const isActive =
+                                            activeTab === category.slug;
 
-                                            {getCategoryTabLabel(category)}
-                                        </TabsTrigger>
-                                    ))}
+                                        return (
+                                            <TabsTrigger
+                                                key={category.documentId}
+                                                value={category.slug}
+                                                className="h-auto whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200"
+                                                style={{
+                                                    flex: '0 0 auto',
+                                                    backgroundColor:
+                                                        isActive
+                                                            ? '#15803d'
+                                                            : 'transparent',
+                                                    color:
+                                                        isActive
+                                                            ? '#ffffff'
+                                                            : '#111827',
+                                                    boxShadow:
+                                                        isActive
+                                                            ? '0 2px 6px rgba(0, 0, 0, 0.12)'
+                                                            : 'none',
+                                                }}
+                                            >
+                                                {getCategoryTabLabel(category)}
+                                            </TabsTrigger>
+                                        );
+                                    })}
                                 </TabsList>
 
                                 <TabsContent value={activeTab}>
-
-                                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                    <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
                                         {renderProducts()}
                                     </div>
                                 </TabsContent>
