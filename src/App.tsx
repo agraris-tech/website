@@ -61,6 +61,10 @@ import {
 } from './components/MetrikaRouteTracker';
 
 import {
+    ContactGoalTracker,
+} from './components/ContactGoalTracker';
+
+import {
     LeadRequestModal,
 } from './components/LeadRequestModal';
 
@@ -105,6 +109,8 @@ export default function App() {
                     <ScrollManager />
 
                     <MetrikaRouteTracker />
+
+                    <ContactGoalTracker />
 
                     <div className="min-h-screen flex flex-col">
                         <Header />
@@ -192,6 +198,16 @@ export default function App() {
                                     }
                                 />
 
+                                <Route
+                                    path="/cart"
+                                    element={
+                                        <ResponsivePageWrapper
+                                            desktop={
+                                                <CartPage />
+                                            }
+                                        />
+                                    }
+                                />
                             </Routes>
 
                             <GlobalLeadModal />

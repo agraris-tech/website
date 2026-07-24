@@ -18,6 +18,25 @@ const COUNTER_BY_HOSTNAME: Record<
         110734172,
 };
 
+export type YandexContactChannel =
+    | 'phone'
+    | 'email'
+    | 'telegram'
+    | 'whatsapp';
+
+export type YandexLeadType =
+    | 'lead'
+    | 'product_offer'
+    | 'callback'
+    | 'contact_form';
+
+export type YandexGoalId =
+    | 'lead_success'
+    | 'phone_click'
+    | 'email_click'
+    | 'whatsapp_click'
+    | 'telegram_click';
+
 type YandexMetrikaFunction = {
     (...args: unknown[]): void;
 
@@ -32,17 +51,12 @@ type YandexMetrikaHitOptions = {
 
 declare global {
     interface Window {
-        ym?:
-            YandexMetrikaFunction;
+        ym?: YandexMetrikaFunction;
 
-        dataLayer?:
-            unknown[];
-
-        __AGRARIS_YM_INITIALIZED__?:
-            Record<
-                string,
-                boolean
-            >;
+        __AGRARIS_YM_INITIALIZED__?: Record<
+            string,
+            boolean
+        >;
     }
 }
 
@@ -113,9 +127,11 @@ function ensureYmQueue():
         ym.a.push(args);
     }) as YandexMetrikaFunction;
 
-    ym.l = Date.now();
+    ym.l =
+        Date.now();
 
-    window.ym = ym;
+    window.ym =
+        ym;
 
     return ym;
 }
@@ -138,7 +154,8 @@ function loadYandexMetrikaScript():
     script.id =
         YANDEX_METRIKA_SCRIPT_ID;
 
-    script.async = true;
+    script.async =
+        true;
 
     script.src =
         YANDEX_METRIKA_SCRIPT_URL;
@@ -163,9 +180,8 @@ export function initYandexMetrika():
         getYandexMetrikaCounterId();
 
     /*
-     * На localhost Метрику
-     * не запускаем, чтобы тесты
-     * не попадали в статистику.
+     * На localhost и неизвестных
+     * доменах Метрику не запускаем.
      */
     if (!counterId) {
         return null;
@@ -195,11 +211,10 @@ export function initYandexMetrika():
     loadYandexMetrikaScript();
 
     /*
-     * defer: true отключает
-     * автоматическую отправку
-     * первого просмотра.
+     * defer отключает автоматическую
+     * отправку первого просмотра.
      *
-     * Все просмотры отправляет
+     * Просмотры SPA отправляет
      * MetrikaRouteTracker.
      */
     ym(
@@ -250,9 +265,8 @@ export function trackYandexPageView(
     }
 
     /*
-     * Защита от двойного вызова
-     * одного маршрута, в том числе
-     * в React StrictMode.
+     * Защита от двойного просмотра
+     * одного URL, включая StrictMode.
      */
     if (
         lastTrackedUrl === url
@@ -286,4 +300,175 @@ export function trackYandexPageView(
         url;
 
     return true;
+}
+
+export function trackYandexGoal(
+    goalId: YandexGoalId,
+    parameters?: Record<
+        string,
+        unknown
+    >,
+): boolean {
+    const counterId =
+        initYandexMetrika();
+
+    if (
+        !counterId ||
+        typeof window.ym !==
+        'function'
+    ) {
+        return false;
+    }
+
+    window.ym(
+        counterId,
+        'reachGoal',
+        goalId,
+        parameters || {},
+    );
+
+    return true;
+}
+
+function getLeadStorageKey(
+    counterId: number,
+    leadId: string,
+): string {
+    return [
+        'agraris',
+        'ym',
+        counterId,
+        'lead_success',
+        leadId,
+    ].join(':');
+}
+
+/*
+ * Вызывается только после
+ * успешной отправки заявки
+ * и получения leadId от сервера.
+ */
+export function trackYandexLeadSuccess(
+    leadId: string,
+    leadType:
+        YandexLeadType = 'lead',
+): boolean {
+    if (
+        typeof window ===
+        'undefined'
+    ) {
+        return false;
+    }
+
+    const cleanLeadId =
+        leadId.trim();
+
+    if (!cleanLeadId) {
+        return false;
+    }
+
+    const counterId =
+        getYandexMetrikaCounterId();
+
+    if (!counterId) {
+        return false;
+    }
+
+    const storageKey =
+        getLeadStorageKey(
+            counterId,
+            cleanLeadId,
+        );
+
+    /*
+     * Не отправляем одну заявку
+     * повторно в пределах вкладки.
+     */
+    try {
+        if (
+            window.sessionStorage
+                .getItem(storageKey) ===
+            '1'
+        ) {
+            return false;
+        }
+    } catch {
+        /*
+         * sessionStorage может быть
+         * недоступен в браузере.
+         */
+    }
+
+    const sent =
+        trackYandexGoal(
+            'lead_success',
+            {
+                lead_id:
+                cleanLeadId,
+
+                lead_type:
+                leadType,
+
+                page_url:
+                window.location.href,
+            },
+        );
+
+    if (sent) {
+        try {
+            window.sessionStorage
+                .setItem(
+                    storageKey,
+                    '1',
+                );
+        } catch {
+            /*
+             * На достижение цели
+             * это не влияет.
+             */
+        }
+    }
+
+    return sent;
+}
+
+const CONTACT_GOAL_BY_CHANNEL:
+    Record<
+        YandexContactChannel,
+        YandexGoalId
+    > = {
+    phone:
+        'phone_click',
+
+    email:
+        'email_click',
+
+    whatsapp:
+        'whatsapp_click',
+
+    telegram:
+        'telegram_click',
+};
+
+export function trackYandexContactGoal(
+    channel:
+        YandexContactChannel,
+): boolean {
+    return trackYandexGoal(
+        CONTACT_GOAL_BY_CHANNEL[
+            channel
+            ],
+        {
+            contact_channel:
+            channel,
+
+            page_url:
+                typeof window !==
+                'undefined'
+                    ? window
+                        .location
+                        .href
+                    : '',
+        },
+    );
 }
