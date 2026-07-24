@@ -4,46 +4,136 @@ const ALLOWED_HOSTS = new Set([
     'agraris.tech',
 ]);
 
+const DEFAULT_STRAPI_API_URL =
+    'https://cozy-action-02025ea19f.strapiapp.com/api';
+
+const PAGE_SIZE = 100;
+const MAX_PAGES = 1000;
+
 type SitemapEntry = {
     url: string;
     lastModified?: string;
 };
 
-type StrapiProduct = {
-    slug?: string;
-    updatedAt?: string;
+type StrapiRecord = {
+    slug?: unknown;
+    updatedAt?: unknown;
 
+    /*
+     * Совместимость со Strapi 4.
+     * В Strapi 5 поля обычно находятся
+     * непосредственно в объекте.
+     */
     attributes?: {
-        slug?: string;
-        updatedAt?: string;
+        slug?: unknown;
+        updatedAt?: unknown;
     };
 };
 
-function getCurrentHost(req: any): string {
-    const forwardedHost = req.headers['x-forwarded-host'];
+type StrapiPagination = {
+    page?: number;
+    pageSize?: number;
+    pageCount?: number;
+    total?: number;
+};
+
+type StrapiCollectionResponse = {
+    data?: StrapiRecord[];
+
+    meta?: {
+        pagination?: StrapiPagination;
+    };
+};
+
+type CollectionSitemapOptions = {
+    strapiBaseUrl: string;
+    baseUrl: string;
+    endpoint: string;
+    pathPrefix: string;
+};
+
+function getCurrentHost(
+    req: any,
+): string {
+    const forwardedHost =
+        req.headers['x-forwarded-host'];
 
     const rawHost =
         (
-            Array.isArray(forwardedHost)
+            Array.isArray(
+                forwardedHost,
+            )
                 ? forwardedHost[0]
                 : forwardedHost
         ) ||
         req.headers.host ||
         'agraristech.by';
 
-    const cleanHost = String(rawHost)
-        .split(',')[0]
-        .trim()
-        .toLowerCase()
-        .replace(/^www\./, '')
-        .split(':')[0];
+    const cleanHost =
+        String(rawHost)
+            .split(',')[0]
+            .trim()
+            .toLowerCase()
+            .replace(/^www\./, '')
+            .split(':')[0];
 
-    return ALLOWED_HOSTS.has(cleanHost)
+    return ALLOWED_HOSTS.has(
+        cleanHost,
+    )
         ? cleanHost
         : 'agraristech.by';
 }
 
-function escapeXml(value: string): string {
+function getStrapiBaseUrl(): string {
+    const configuredUrl =
+        process.env.STRAPI_URL ||
+        process.env.STRAPI_API_URL ||
+        process.env.VITE_STRAPI_URL ||
+        DEFAULT_STRAPI_API_URL;
+
+    const cleanUrl =
+        configuredUrl
+            .trim()
+            .replace(/\/+$/, '');
+
+    if (!cleanUrl) {
+        return DEFAULT_STRAPI_API_URL;
+    }
+
+    return cleanUrl.endsWith('/api')
+        ? cleanUrl
+        : `${cleanUrl}/api`;
+}
+
+function getRequestHeaders(): Record<
+    string,
+    string
+> {
+    const headers: Record<
+        string,
+        string
+    > = {
+        Accept: 'application/json',
+    };
+
+    /*
+     * Токен необязателен, если Public Role
+     * имеет разрешение find для products
+     * и news-articles.
+     */
+    if (
+        process.env.STRAPI_API_TOKEN
+    ) {
+        headers.Authorization =
+            `Bearer ${process.env.STRAPI_API_TOKEN}`;
+    }
+
+    return headers;
+}
+
+function escapeXml(
+    value: string,
+): string {
     return value
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -52,70 +142,162 @@ function escapeXml(value: string): string {
         .replace(/'/g, '&apos;');
 }
 
+function getString(
+    value: unknown,
+): string {
+    return typeof value === 'string'
+        ? value.trim()
+        : '';
+}
+
 function normalizeDate(
-    value?: string,
+    value: unknown,
 ): string | undefined {
-    if (!value) {
+    if (
+        typeof value !== 'string' ||
+        !value.trim()
+    ) {
         return undefined;
     }
 
-    const date = new Date(value);
+    const date =
+        new Date(value);
 
-    if (Number.isNaN(date.getTime())) {
+    if (
+        Number.isNaN(
+            date.getTime(),
+        )
+    ) {
         return undefined;
     }
 
     return date.toISOString();
 }
 
-function getStrapiBaseUrl(): string | null {
-    const configuredUrl =
-        process.env.STRAPI_URL ||
-        process.env.STRAPI_API_URL ||
-        process.env.VITE_STRAPI_URL ||
-        "";
+function unwrapStrapiRecord(
+    record: StrapiRecord,
+): {
+    slug: string;
+    updatedAt?: string;
+} {
+    const source =
+        record.attributes ||
+        record;
 
-    const cleanUrl = configuredUrl
-        .trim()
-        .replace(/\/+$/, '');
+    return {
+        slug:
+            getString(
+                source.slug,
+            ),
 
-    if (!cleanUrl) {
-        return null;
-    }
-
-    /*
-     * Можно указать:
-     * https://example.strapiapp.com
-     *
-     * или:
-     * https://example.strapiapp.com/api
-     */
-    return cleanUrl.endsWith('/api')
-        ? cleanUrl
-        : `${cleanUrl}/api`;
+        updatedAt:
+            normalizeDate(
+                source.updatedAt,
+            ),
+    };
 }
 
-async function getAllProductEntries(
-    baseUrl: string,
-): Promise<SitemapEntry[]> {
-    const strapiBaseUrl = getStrapiBaseUrl();
+async function fetchStrapiJson(
+    requestUrl: string,
+): Promise<StrapiCollectionResponse> {
+    const controller =
+        new AbortController();
 
-    if (!strapiBaseUrl) {
-        throw new Error(
-            'Не указана переменная STRAPI_URL или VITE_STRAPI_URL',
+    const timeout =
+        setTimeout(
+            () => {
+                controller.abort();
+            },
+            15000,
         );
-    }
 
-    const entries: SitemapEntry[] = [];
+    try {
+        const response =
+            await fetch(
+                requestUrl,
+                {
+                    headers:
+                        getRequestHeaders(),
+
+                    signal:
+                    controller.signal,
+                },
+            );
+
+        if (!response.ok) {
+            const responseText =
+                await response.text();
+
+            throw new Error(
+                `Strapi ${response.status} для ${requestUrl}: ${responseText}`,
+            );
+        }
+
+        return (
+            await response.json()
+        ) as StrapiCollectionResponse;
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
+async function getAllCollectionEntries({
+                                           strapiBaseUrl,
+                                           baseUrl,
+                                           endpoint,
+                                           pathPrefix,
+                                       }: CollectionSitemapOptions): Promise<
+    SitemapEntry[]
+> {
+    const entries:
+        SitemapEntry[] = [];
 
     let currentPage = 1;
     let pageCount = 1;
 
     do {
-        const params = new URLSearchParams();
+        if (
+            currentPage > MAX_PAGES
+        ) {
+            throw new Error(
+                `Превышен лимит страниц Strapi для ${endpoint}`,
+            );
+        }
 
-        params.set('fields[0]', 'slug');
-        params.set('fields[1]', 'updatedAt');
+        const params =
+            new URLSearchParams();
+
+        /*
+         * Берём только поля,
+         * необходимые Sitemap.
+         */
+        params.set(
+            'fields[0]',
+            'slug',
+        );
+
+        params.set(
+            'fields[1]',
+            'updatedAt',
+        );
+
+        /*
+         * Только записи, включённые
+         * на сайте.
+         */
+        params.set(
+            'filters[isActive][$eq]',
+            'true',
+        );
+
+        /*
+         * Только опубликованные записи.
+         * Черновики в Sitemap не попадут.
+         */
+        params.set(
+            'status',
+            'published',
+        );
 
         params.set(
             'pagination[page]',
@@ -124,85 +306,83 @@ async function getAllProductEntries(
 
         params.set(
             'pagination[pageSize]',
-            '100',
+            String(PAGE_SIZE),
+        );
+
+        params.set(
+            'pagination[withCount]',
+            'true',
         );
 
         /*
-         * Чтобы в sitemap попадали только опубликованные товары.
-         * Для Strapi 5 параметр обычно поддерживается.
+         * Стабильный порядок выдачи.
          */
-        params.set('status', 'published');
+        params.set(
+            'sort[0]',
+            'updatedAt:desc',
+        );
 
         const requestUrl =
-            `${strapiBaseUrl}/products?${params.toString()}`;
+            `${strapiBaseUrl}` +
+            `/${endpoint}` +
+            `?${params.toString()}`;
 
-        const headers: Record<string, string> = {
-            Accept: 'application/json',
-        };
-
-        if (process.env.STRAPI_API_TOKEN) {
-            headers.Authorization =
-                `Bearer ${process.env.STRAPI_API_TOKEN}`;
-        }
-
-        const response = await fetch(requestUrl, {
-            headers,
-        });
-
-        if (!response.ok) {
-            const responseText =
-                await response.text();
-
-            throw new Error(
-                `Strapi вернул ${response.status}: ${responseText}`,
+        const payload =
+            await fetchStrapiJson(
+                requestUrl,
             );
-        }
 
-        const payload = await response.json();
-
-        const products: StrapiProduct[] =
-            Array.isArray(payload?.data)
+        const records =
+            Array.isArray(
+                payload.data,
+            )
                 ? payload.data
                 : [];
 
-        products.forEach((rawProduct) => {
-            /*
-             * Strapi 5:
-             * rawProduct.slug
-             *
-             * Strapi 4:
-             * rawProduct.attributes.slug
-             */
-            const product =
-                rawProduct.attributes ||
-                rawProduct;
+        records.forEach(
+            (record) => {
+                const item =
+                    unwrapStrapiRecord(
+                        record,
+                    );
 
-            const slug =
-                product.slug?.trim();
+                if (!item.slug) {
+                    return;
+                }
 
-            if (!slug) {
-                return;
-            }
+                entries.push({
+                    url:
+                        `${baseUrl}` +
+                        `${pathPrefix}/` +
+                        encodeURIComponent(
+                            item.slug,
+                        ),
 
-            entries.push({
-                url:
-                    `${baseUrl}/catalog/` +
-                    encodeURIComponent(slug),
-
-                lastModified:
-                    normalizeDate(
-                        product.updatedAt,
-                    ),
-            });
-        });
-
-        pageCount = Number(
-            payload?.meta?.pagination?.pageCount ||
-            1,
+                    lastModified:
+                    item.updatedAt,
+                });
+            },
         );
 
+        const receivedPageCount =
+            Number(
+                payload.meta
+                    ?.pagination
+                    ?.pageCount,
+            );
+
+        pageCount =
+            Number.isFinite(
+                receivedPageCount,
+            ) &&
+            receivedPageCount > 0
+                ? receivedPageCount
+                : 1;
+
         currentPage += 1;
-    } while (currentPage <= pageCount);
+    } while (
+        currentPage <= pageCount
+        );
 
     return entries;
 }
@@ -212,87 +392,218 @@ function createUrlXml(
 ): string {
     const lastModifiedXml =
         entry.lastModified
-            ? `
-    <lastmod>${escapeXml(
-                entry.lastModified,
-            )}</lastmod>`
+            ? [
+                '',
+                '    <lastmod>',
+                escapeXml(
+                    entry.lastModified,
+                ),
+                '</lastmod>',
+            ].join('')
             : '';
 
-    return `  <url>
-    <loc>${escapeXml(entry.url)}</loc>${lastModifiedXml}
-  </url>`;
+    return [
+        '  <url>',
+        `    <loc>${escapeXml(
+            entry.url,
+        )}</loc>${lastModifiedXml}`,
+        '  </url>',
+    ].join('\n');
+}
+
+function deduplicateEntries(
+    entries: SitemapEntry[],
+): SitemapEntry[] {
+    const uniqueEntries =
+        new Map<
+            string,
+            SitemapEntry
+        >();
+
+    entries.forEach(
+        (entry) => {
+            const existing =
+                uniqueEntries.get(
+                    entry.url,
+                );
+
+            /*
+             * При дубле сохраняем запись
+             * с более свежим lastmod.
+             */
+            if (!existing) {
+                uniqueEntries.set(
+                    entry.url,
+                    entry,
+                );
+
+                return;
+            }
+
+            const existingTime =
+                existing.lastModified
+                    ? new Date(
+                        existing.lastModified,
+                    ).getTime()
+                    : 0;
+
+            const entryTime =
+                entry.lastModified
+                    ? new Date(
+                        entry.lastModified,
+                    ).getTime()
+                    : 0;
+
+            if (
+                entryTime >
+                existingTime
+            ) {
+                uniqueEntries.set(
+                    entry.url,
+                    entry,
+                );
+            }
+        },
+    );
+
+    return [
+        ...uniqueEntries.values(),
+    ];
 }
 
 export default async function handler(
     req: any,
     res: any,
 ) {
-    try {
-        const host = getCurrentHost(req);
-        const baseUrl = `https://${host}`;
+    if (
+        req.method !== 'GET' &&
+        req.method !== 'HEAD'
+    ) {
+        res.setHeader(
+            'Allow',
+            'GET, HEAD',
+        );
 
-        const staticEntries: SitemapEntry[] = [
+        return res
+            .status(405)
+            .send(
+                'Method Not Allowed',
+            );
+    }
+
+    try {
+        const host =
+            getCurrentHost(req);
+
+        const baseUrl =
+            `https://${host}`;
+
+        const strapiBaseUrl =
+            getStrapiBaseUrl();
+
+        const staticEntries:
+            SitemapEntry[] = [
             {
                 url: `${baseUrl}/`,
             },
             {
-                url: `${baseUrl}/about`,
+                url:
+                    `${baseUrl}/about`,
             },
             {
-                url: `${baseUrl}/catalog`,
+                url:
+                    `${baseUrl}/catalog`,
             },
             {
-                url: `${baseUrl}/contact`,
+                url:
+                    `${baseUrl}/contact`,
             },
             {
-                url: `${baseUrl}/news`,
+                url:
+                    `${baseUrl}/news`,
             },
         ];
 
-        const productEntries =
-            await getAllProductEntries(
+
+        const [
+            productEntries,
+            newsEntries,
+        ] = await Promise.all([
+            getAllCollectionEntries({
+                strapiBaseUrl,
                 baseUrl,
-            );
 
-        /*
-         * Удаляем возможные дубли.
-         */
-        const uniqueEntries = new Map<
-            string,
-            SitemapEntry
-        >();
+                endpoint:
+                    'products',
 
-        [
-            ...staticEntries,
+                pathPrefix:
+                    '/catalog',
+            }),
+
+            getAllCollectionEntries({
+                strapiBaseUrl,
+                baseUrl,
+
+                endpoint:
+                    'news-articles',
+
+                pathPrefix:
+                    '/news',
+            }),
+        ]);
+
+        const dynamicEntries = [
             ...productEntries,
-        ].forEach((entry) => {
-            uniqueEntries.set(
-                entry.url,
-                entry,
-            );
-        });
+            ...newsEntries,
+        ].sort(
+            (first, second) =>
+                first.url.localeCompare(
+                    second.url,
+                    'ru',
+                ),
+        );
 
-        const entries = [
-            ...uniqueEntries.values(),
-        ];
+        const entries =
+            deduplicateEntries([
+                ...staticEntries,
+                ...dynamicEntries,
+            ]);
 
-        const xml =
-            `<?xml version="1.0" encoding="UTF-8"?>\n` +
-            `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+        const xml = [
+            '<?xml version="1.0" encoding="UTF-8"?>',
+
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+
             entries
                 .map(createUrlXml)
-                .join('\n') +
-            `\n</urlset>`;
+                .join('\n'),
+
+            '</urlset>',
+        ].join('\n');
 
         res.setHeader(
             'Content-Type',
             'application/xml; charset=utf-8',
         );
 
+
         res.setHeader(
             'Cache-Control',
-            'public, max-age=0, s-maxage=900, stale-while-revalidate=3600',
+            'public, max-age=0, s-maxage=300, stale-while-revalidate=600',
         );
+
+        res.setHeader(
+            'X-Content-Type-Options',
+            'nosniff',
+        );
+
+        if (
+            req.method === 'HEAD'
+        ) {
+            return res
+                .status(200)
+                .end();
+        }
 
         return res
             .status(200)
@@ -303,10 +614,25 @@ export default async function handler(
             error,
         );
 
+        res.setHeader(
+            'Content-Type',
+            'text/plain; charset=utf-8',
+        );
+
+        res.setHeader(
+            'Cache-Control',
+            'no-store',
+        );
+
+        res.setHeader(
+            'Retry-After',
+            '300',
+        );
+
         return res
-            .status(500)
+            .status(503)
             .send(
-                'Failed to generate sitemap',
+                'Sitemap temporarily unavailable',
             );
     }
 }
