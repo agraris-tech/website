@@ -10,9 +10,53 @@ const SITE_URL =
 const DEFAULT_CATEGORY_ID =
     '9000000';
 
+const DEFAULT_CATEGORY_NAME =
+    'Сельскохозяйственная техника';
+
+/*
+ * Не передаём в рекламный фид
+ * условные и слишком низкие цены.
+ *
+ * Это отделяет крупную технику
+ * от дешёвых запчастей.
+ */
+const MIN_EQUIPMENT_PRICE_RUB =
+    100_000;
+
+/*
+ * Категории, которые не должны
+ * участвовать в этой рекламной кампании.
+ */
+const EXCLUDED_CATEGORY_IDS =
+    new Set<string>([
+        '64', // Запчасти Grimme
+        '69', // Строительная техника
+        '75', // Запчасти Sipma
+        '76', // Запчасти ANNA Z644
+    ]);
+
+const EXCLUDED_CATEGORY_NAME_PARTS = [
+    'запчаст',
+    'строительная техника',
+];
+
+type ProductCondition =
+    | 'Новая'
+    | 'Б/У'
+    | null;
+
+type ProductType =
+    | 'new'
+    | 'used';
+
 type StrapiRelation = {
+    data?:
+        | StrapiRelation
+        | null;
+
     id?: number;
     documentId?: string;
+
     name?: string;
     slug?: string;
 
@@ -23,6 +67,10 @@ type StrapiRelation = {
 };
 
 type StrapiMedia = {
+    data?:
+        | StrapiMedia
+        | null;
+
     url?: string;
 
     attributes?: {
@@ -40,20 +88,37 @@ type StrapiProduct = {
     shortDescription?: string;
     description?: string;
 
-    priceBase?: number | null;
+    priceBase?:
+        | number
+        | string
+        | null;
+
     baseCurrency?: string;
 
     availability?: string;
+
     isActive?: boolean;
 
-    type?: 'new' | 'used';
+    type?: ProductType;
 
-    year?: number | null;
+    year?:
+        | number
+        | string
+        | null;
+
     sku?: string;
 
-    brand?: StrapiRelation | null;
-    category?: StrapiRelation | null;
-    mainImage?: StrapiMedia | null;
+    brand?:
+        | StrapiRelation
+        | null;
+
+    category?:
+        | StrapiRelation
+        | null;
+
+    mainImage?:
+        | StrapiMedia
+        | null;
 
     attributes?: Omit<
         StrapiProduct,
@@ -62,17 +127,28 @@ type StrapiProduct = {
 };
 
 type CurrencyRate = {
+    id?: number;
+
     baseCurrency?: string;
-    rubRate?: number | null;
+
+    rubRate?:
+        | number
+        | string
+        | null;
 
     attributes?: {
         baseCurrency?: string;
-        rubRate?: number | null;
+
+        rubRate?:
+            | number
+            | string
+            | null;
     };
 };
 
 type FeedProduct = {
     id: string;
+
     title: string;
     slug: string;
 
@@ -83,239 +159,578 @@ type FeedProduct = {
     imageUrl: string;
 
     brandName: string;
+
     categoryId: string;
     categoryName: string;
 
-    type: 'new' | 'used';
+    condition: ProductCondition;
+
     year: number | null;
+
     sku: string;
 };
 
 function escapeXml(
     value: unknown,
 ): string {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&apos;');
+    return String(
+        value ?? '',
+    )
+        .replace(
+            /&/g,
+            '&amp;',
+        )
+        .replace(
+            /</g,
+            '&lt;',
+        )
+        .replace(
+            />/g,
+            '&gt;',
+        )
+        .replace(
+            /"/g,
+            '&quot;',
+        )
+        .replace(
+            /'/g,
+            '&apos;',
+        );
 }
 
-function stripHtml(
-    value: string,
+function cleanText(
+    value: unknown,
 ): string {
-    return value
-        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/&nbsp;/gi, ' ')
-        .replace(/&amp;/gi, '&')
-        .replace(/&quot;/gi, '"')
-        .replace(/&#39;/gi, "'")
-        .replace(/\s+/g, ' ')
+    return String(
+        value ?? '',
+    )
+        .replace(
+            /<script[\s\S]*?<\/script>/gi,
+            ' ',
+        )
+        .replace(
+            /<style[\s\S]*?<\/style>/gi,
+            ' ',
+        )
+        .replace(
+            /<[^>]+>/g,
+            ' ',
+        )
+        .replace(
+            /&nbsp;/gi,
+            ' ',
+        )
+        .replace(
+            /&amp;/gi,
+            '&',
+        )
+        .replace(
+            /&quot;/gi,
+            '"',
+        )
+        .replace(
+            /&#39;/gi,
+            "'",
+        )
+        .replace(
+            /&ndash;/gi,
+            '–',
+        )
+        .replace(
+            /&mdash;/gi,
+            '—',
+        )
+        .replace(
+            /&sup3;/gi,
+            '³',
+        )
+        .replace(
+            /\s+/g,
+            ' ',
+        )
         .trim();
 }
 
-function truncateText(
-    value: string,
-    maxLength = 3000,
+function normalizeHostnameUrl(
+    rawUrl: string,
 ): string {
-    if (value.length <= maxLength) {
-        return value;
-    }
-
-    return `${value.slice(
-        0,
-        maxLength - 1,
-    ).trim()}…`;
-}
-
-function getRelationValue(
-    relation?: StrapiRelation | null,
-): StrapiRelation | null {
-    if (!relation) {
-        return null;
-    }
-
-    return relation.attributes
-        ? {
-            ...relation,
-            ...relation.attributes,
-        }
-        : relation;
-}
-
-function getMediaUrl(
-    media?: StrapiMedia | null,
-): string {
-    if (!media) {
-        return '';
-    }
-
-    const rawUrl =
-        media.attributes?.url ||
-        media.url ||
-        '';
-
     if (!rawUrl) {
         return '';
     }
 
     if (
-        rawUrl.startsWith('https://') ||
-        rawUrl.startsWith('http://')
+        rawUrl.startsWith(
+            'https://',
+        ) ||
+        rawUrl.startsWith(
+            'http://',
+        )
     ) {
         return rawUrl;
     }
 
-    return `${STRAPI_ORIGIN}${
-        rawUrl.startsWith('/')
-            ? ''
-            : '/'
-    }${rawUrl}`;
+    return (
+        STRAPI_ORIGIN +
+        (
+            rawUrl.startsWith(
+                '/',
+            )
+                ? ''
+                : '/'
+        ) +
+        rawUrl
+    );
 }
 
-function normalizeAvailability(
-    value?: string,
-): {
-    available: boolean;
-    preorder: boolean;
-} {
-    const normalized =
-        String(value || '')
-            .trim()
-            .toLowerCase();
-
-    if (
-        normalized.includes(
-            'нет в наличии',
-        ) ||
-        normalized.includes(
-            'продан',
-        ) ||
-        normalized.includes(
-            'продано',
-        ) ||
-        normalized.includes(
-            'out of stock',
-        )
-    ) {
-        return {
-            available: false,
-            preorder: false,
-        };
+function getRelationValue(
+    relation?:
+        | StrapiRelation
+        | null,
+): StrapiRelation | null {
+    if (!relation) {
+        return null;
     }
 
-    if (
-        normalized.includes(
-            'под заказ',
-        ) ||
-        normalized.includes(
-            'предзаказ',
-        ) ||
-        normalized.includes(
-            'preorder',
-        )
-    ) {
-        return {
-            available: true,
-            preorder: true,
-        };
+    const rawRelation =
+        relation.data ||
+        relation;
+
+    if (!rawRelation) {
+        return null;
     }
 
     return {
-        available: true,
-        preorder: false,
+        ...rawRelation,
+
+        ...(
+            rawRelation.attributes ||
+            {}
+        ),
     };
 }
 
-function getYmlDate(): string {
-    return new Date()
-        .toISOString()
-        .slice(0, 16)
-        .replace('T', ' ');
-}
+function getMediaUrl(
+    media?:
+        | StrapiMedia
+        | null,
+): string {
+    if (!media) {
+        return '';
+    }
 
-async function fetchCurrencyRate():
-    Promise<number | null> {
-    const response = await fetch(
-        `${STRAPI_API_URL}/currency-rates`,
-        {
-            headers: {
-                Accept:
-                    'application/json',
-            },
-        },
+    const rawMedia =
+        media.data ||
+        media;
+
+    if (!rawMedia) {
+        return '';
+    }
+
+    const rawUrl =
+        rawMedia.attributes?.url ||
+        rawMedia.url ||
+        '';
+
+    return normalizeHostnameUrl(
+        rawUrl,
     );
-
-    if (!response.ok) {
-        return null;
-    }
-
-    const payload =
-        await response.json();
-
-    const rawItem =
-        Array.isArray(payload?.data)
-            ? payload.data[0]
-            : payload?.data;
-
-    if (!rawItem) {
-        return null;
-    }
-
-    const item: CurrencyRate =
-        rawItem.attributes
-            ? {
-                ...rawItem,
-                ...rawItem.attributes,
-            }
-            : rawItem;
-
-    const rate =
-        Number(item.rubRate);
-
-    return Number.isFinite(rate) &&
-    rate > 0
-        ? rate
-        : null;
 }
 
-function convertToRub(
-    price: number,
-    currency: string,
-    rubRate: number | null,
-): number | null {
-    const normalizedCurrency =
-        currency
-            .trim()
-            .toUpperCase();
+function getCategoryId(
+    category:
+        | StrapiRelation
+        | null,
+): string {
+    const numericId =
+        Number(category?.id);
 
     if (
-        normalizedCurrency === 'RUB' ||
-        normalizedCurrency === 'RUR'
+        Number.isInteger(
+            numericId,
+        ) &&
+        numericId > 0
     ) {
-        return price;
+        return String(
+            numericId,
+        );
     }
 
+    return DEFAULT_CATEGORY_ID;
+}
+
+function isExcludedCategory(
+    categoryId: string,
+    categoryName: string,
+): boolean {
     if (
-        normalizedCurrency === 'EUR' &&
-        rubRate
+        EXCLUDED_CATEGORY_IDS.has(
+            categoryId,
+        )
     ) {
-        return price * rubRate;
+        return true;
+    }
+
+    const normalizedName =
+        categoryName
+            .toLowerCase()
+            .trim();
+
+    return EXCLUDED_CATEGORY_NAME_PARTS
+        .some(
+            (part) =>
+                normalizedName.includes(
+                    part,
+                ),
+        );
+}
+
+function isProductAvailable(
+    availability?: string,
+): boolean {
+    const normalized =
+        cleanText(
+            availability,
+        )
+            .toLowerCase()
+            .replace(
+                /[_-]+/g,
+                ' ',
+            );
+
+    if (!normalized) {
+        return true;
+    }
+
+    const unavailableMarkers = [
+        'нет в наличии',
+        'не доступен',
+        'недоступен',
+        'продан',
+        'продано',
+        'out of stock',
+        'unavailable',
+        'sold',
+    ];
+
+    return !unavailableMarkers
+        .some(
+            (marker) =>
+                normalized.includes(
+                    marker,
+                ),
+        );
+}
+
+function getProductCondition(
+    type?: ProductType,
+): ProductCondition {
+    if (type === 'new') {
+        return 'Новая';
+    }
+
+    if (type === 'used') {
+        return 'Б/У';
     }
 
     return null;
 }
 
-async function fetchAllProducts(
-    rubRate: number | null,
-): Promise<FeedProduct[]> {
-    const products: FeedProduct[] = [];
+function getProductYear(
+    value:
+        | number
+        | string
+        | null
+        | undefined,
+): number | null {
+    const year =
+        Number(value);
 
-    let currentPage = 1;
-    let pageCount = 1;
+    const maximumYear =
+        new Date()
+            .getUTCFullYear() +
+        1;
+
+    if (
+        !Number.isInteger(year) ||
+        year < 1900 ||
+        year > maximumYear
+    ) {
+        return null;
+    }
+
+    return year;
+}
+
+function getYmlDate(): string {
+    return new Date()
+        .toISOString()
+        .slice(
+            0,
+            16,
+        )
+        .replace(
+            'T',
+            ' ',
+        );
+}
+
+function normalizeCurrencyCode(
+    value?: string,
+): string {
+    const currency =
+        cleanText(
+            value ||
+            'EUR',
+        )
+            .toUpperCase();
+
+    if (currency === 'RUR') {
+        return 'RUB';
+    }
+
+    return currency;
+}
+
+function createNeutralDescription(
+    product: {
+        title: string;
+        categoryName: string;
+        brandName: string;
+        year: number | null;
+        condition:
+            ProductCondition;
+    },
+): string {
+    const parts: string[] = [
+        product.title,
+        `Категория: ${product.categoryName}.`,
+    ];
+
+    if (product.brandName) {
+        parts.push(
+            `Производитель: ${product.brandName}.`,
+        );
+    }
+
+    if (product.year) {
+        parts.push(
+            `Год выпуска: ${product.year}.`,
+        );
+    }
+
+    if (product.condition) {
+        parts.push(
+            `Состояние: ${product.condition}.`,
+        );
+    }
+
+    return parts
+        .join(' ')
+        .replace(
+            /\s+/g,
+            ' ',
+        )
+        .trim()
+        .slice(
+            0,
+            3000,
+        );
+}
+
+function getOfferId(
+    product: StrapiProduct,
+    slug: string,
+): string {
+    const rawId =
+        cleanText(
+            product.documentId ||
+            product.id ||
+            slug,
+        );
+
+    return rawId
+        .slice(
+            0,
+            100,
+        );
+}
+
+async function fetchCurrencyRates():
+    Promise<Map<string, number>> {
+    const params =
+        new URLSearchParams();
+
+    params.set(
+        'pagination[pageSize]',
+        '100',
+    );
+
+    params.set(
+        'status',
+        'published',
+    );
+
+    const response =
+        await fetch(
+            `${STRAPI_API_URL}/currency-rates?${params.toString()}`,
+            {
+                headers: {
+                    Accept:
+                        'application/json',
+                },
+            },
+        );
+
+    if (!response.ok) {
+        const errorText =
+            await response.text();
+
+        throw new Error(
+            `Strapi currency rates error ${response.status}: ${errorText}`,
+        );
+    }
+
+    const payload =
+        await response.json();
+
+    const rawItems:
+        CurrencyRate[] =
+        Array.isArray(
+            payload?.data,
+        )
+            ? payload.data
+            : payload?.data
+                ? [
+                    payload.data,
+                ]
+                : [];
+
+    const rates =
+        new Map<
+            string,
+            number
+        >();
+
+    rates.set(
+        'RUB',
+        1,
+    );
+
+    for (
+        const rawItem of rawItems
+        ) {
+        const item:
+            CurrencyRate =
+            rawItem.attributes
+                ? {
+                    ...rawItem,
+                    ...rawItem.attributes,
+                }
+                : rawItem;
+
+        const currency =
+            normalizeCurrencyCode(
+                item.baseCurrency,
+            );
+
+        const rubRate =
+            Number(
+                item.rubRate,
+            );
+
+        if (
+            !currency ||
+            !Number.isFinite(
+                rubRate,
+            ) ||
+            rubRate <= 0
+        ) {
+            continue;
+        }
+
+        rates.set(
+            currency,
+            rubRate,
+        );
+    }
+
+    /*
+     * Большая часть каталога AGRARIS
+     * хранится в EUR. Не генерируем
+     * неполный фид без курса.
+     */
+    if (
+        !rates.has(
+            'EUR',
+        )
+    ) {
+        throw new Error(
+            'EUR to RUB currency rate is missing',
+        );
+    }
+
+    return rates;
+}
+
+function convertToRub(
+    price: number,
+    currency: string,
+    rates:
+        Map<string, number>,
+): number | null {
+    const normalizedCurrency =
+        normalizeCurrencyCode(
+            currency,
+        );
+
+    const rubRate =
+        rates.get(
+            normalizedCurrency,
+        );
+
+    if (
+        !rubRate ||
+        !Number.isFinite(
+            rubRate,
+        ) ||
+        rubRate <= 0
+    ) {
+        return null;
+    }
+
+    const convertedPrice =
+        price *
+        rubRate;
+
+    if (
+        !Number.isFinite(
+            convertedPrice,
+        ) ||
+        convertedPrice <= 0
+    ) {
+        return null;
+    }
+
+    return Math.round(
+        convertedPrice,
+    );
+}
+
+async function fetchAllProducts(
+    currencyRates:
+        Map<string, number>,
+): Promise<FeedProduct[]> {
+    const products:
+        FeedProduct[] = [];
+
+    const seenOfferIds =
+        new Set<string>();
+
+    let currentPage =
+        1;
+
+    let pageCount =
+        1;
 
     do {
         const params =
@@ -323,7 +738,9 @@ async function fetchAllProducts(
 
         params.set(
             'pagination[page]',
-            String(currentPage),
+            String(
+                currentPage,
+            ),
         );
 
         params.set(
@@ -361,15 +778,16 @@ async function fetchAllProducts(
             'mainImage',
         );
 
-        const response = await fetch(
-            `${STRAPI_API_URL}/products?${params.toString()}`,
-            {
-                headers: {
-                    Accept:
-                        'application/json',
+        const response =
+            await fetch(
+                `${STRAPI_API_URL}/products?${params.toString()}`,
+                {
+                    headers: {
+                        Accept:
+                            'application/json',
+                    },
                 },
-            },
-        );
+            );
 
         if (!response.ok) {
             const errorText =
@@ -383,15 +801,19 @@ async function fetchAllProducts(
         const payload =
             await response.json();
 
-        const items: StrapiProduct[] =
-            Array.isArray(payload?.data)
+        const rawItems:
+            StrapiProduct[] =
+            Array.isArray(
+                payload?.data,
+            )
                 ? payload.data
                 : [];
 
         for (
-            const rawItem of items
+            const rawItem of rawItems
             ) {
-            const item =
+            const item:
+                StrapiProduct =
                 rawItem.attributes
                     ? {
                         ...rawItem,
@@ -400,66 +822,52 @@ async function fetchAllProducts(
                     : rawItem;
 
             if (
-                item.isActive === false
+                item.isActive ===
+                false
+            ) {
+                continue;
+            }
+
+            if (
+                !isProductAvailable(
+                    item.availability,
+                )
             ) {
                 continue;
             }
 
             const title =
-                String(
-                    item.title || '',
-                ).trim();
+                cleanText(
+                    item.title,
+                );
 
             const slug =
-                String(
-                    item.slug || '',
-                ).trim();
+                cleanText(
+                    item.slug,
+                );
 
-            const priceBase =
-                Number(item.priceBase);
+            const sourcePrice =
+                Number(
+                    item.priceBase,
+                );
 
             const imageUrl =
                 getMediaUrl(
                     item.mainImage,
                 );
 
+            /*
+             * Цена 0 или 1 обычно
+             * означает «по запросу».
+             */
             if (
                 !title ||
                 !slug ||
+                !imageUrl ||
                 !Number.isFinite(
-                    priceBase,
+                    sourcePrice,
                 ) ||
-                priceBase <= 0 ||
-                !imageUrl
-            ) {
-                continue;
-            }
-
-            const availability =
-                normalizeAvailability(
-                    item.availability,
-                );
-
-            if (
-                !availability.available
-            ) {
-                continue;
-            }
-
-            const priceRub =
-                convertToRub(
-                    priceBase,
-                    item.baseCurrency ||
-                    'EUR',
-                    rubRate,
-                );
-
-            if (
-                !priceRub ||
-                !Number.isFinite(
-                    priceRub,
-                ) ||
-                priceRub <= 0
+                sourcePrice <= 1
             ) {
                 continue;
             }
@@ -474,81 +882,111 @@ async function fetchAllProducts(
                     item.category,
                 );
 
+            const brandName =
+                cleanText(
+                    brand?.name,
+                );
+
             const categoryId =
-                category?.id
-                    ? String(
-                        category.id,
-                    )
-                    : DEFAULT_CATEGORY_ID;
+                getCategoryId(
+                    category,
+                );
 
             const categoryName =
-                String(
+                cleanText(
                     category?.name ||
-                    'Сельскохозяйственная техника',
-                ).trim();
-
-            const rawDescription =
-                String(
-                    item.shortDescription ||
-                    item.description ||
-                    '',
+                    DEFAULT_CATEGORY_NAME,
                 );
 
-            const description =
-                truncateText(
-                    stripHtml(
-                        rawDescription,
-                    ) ||
-                    `${title}. Подбор, проверка и доставка по России.`,
+            if (
+                isExcludedCategory(
+                    categoryId,
+                    categoryName,
+                )
+            ) {
+                continue;
+            }
+
+            const priceRub =
+                convertToRub(
+                    sourcePrice,
+                    item.baseCurrency ||
+                    'EUR',
+                    currencyRates,
                 );
+
+            if (
+                !priceRub ||
+                priceRub <
+                MIN_EQUIPMENT_PRICE_RUB
+            ) {
+                continue;
+            }
+
+            const condition =
+                getProductCondition(
+                    item.type,
+                );
+
+            const year =
+                getProductYear(
+                    item.year,
+                );
+
+            const offerId =
+                getOfferId(
+                    item,
+                    slug,
+                );
+
+            if (
+                !offerId ||
+                seenOfferIds.has(
+                    offerId,
+                )
+            ) {
+                continue;
+            }
+
+            seenOfferIds.add(
+                offerId,
+            );
 
             products.push({
                 id:
-                    String(
-                        item.documentId ||
-                        item.id ||
-                        slug,
-                    ),
+                offerId,
 
                 title,
                 slug,
-                description,
 
-                priceRub:
-                    Math.round(
-                        priceRub,
+                description:
+                    createNeutralDescription(
+                        {
+                            title,
+                            categoryName,
+                            brandName,
+                            year,
+                            condition,
+                        },
                     ),
+
+                priceRub,
 
                 imageUrl,
 
-                brandName:
-                    String(
-                        brand?.name ||
-                        '',
-                    ).trim(),
+                brandName,
 
                 categoryId,
                 categoryName,
 
-                type:
-                    item.type === 'new'
-                        ? 'new'
-                        : 'used',
+                condition,
 
-                year:
-                    Number.isFinite(
-                        Number(item.year),
-                    )
-                        ? Number(
-                            item.year,
-                        )
-                        : null,
+                year,
 
                 sku:
-                    String(
-                        item.sku ||
-                        '',
-                    ).trim(),
+                    cleanText(
+                        item.sku,
+                    ),
             });
         }
 
@@ -559,16 +997,67 @@ async function fetchAllProducts(
                     ?.pageCount,
             ) || 1;
 
-        currentPage += 1;
+        currentPage +=
+            1;
     } while (
-        currentPage <= pageCount
+        currentPage <=
+        pageCount
         );
+
+    if (
+        products.length ===
+        0
+    ) {
+        throw new Error(
+            'No eligible products found for Yandex feed',
+        );
+    }
 
     return products;
 }
 
-function createFeedXml(
-    products: FeedProduct[],
+function createTrackingUrl(
+    product: FeedProduct,
+): string {
+    const productUrl =
+        `${SITE_URL}/catalog/` +
+        encodeURIComponent(
+            product.slug,
+        );
+
+    const utmContent =
+        `feed_${product.slug}` +
+        `_{ad_id}` +
+        `_{source_type}` +
+        `_{device_type}`;
+
+    return (
+        productUrl +
+        '?utm_source=yandex' +
+        '&utm_medium=cpc' +
+        '&utm_campaign={campaign_id}' +
+        `&utm_content=${encodeURIComponent(
+            utmContent,
+        )
+            /*
+             * Возвращаем фигурные скобки
+             * динамических параметров.
+             */
+            .replace(
+                /%7B/gi,
+                '{',
+            )
+            .replace(
+                /%7D/gi,
+                '}',
+            )}` +
+        '&utm_term={keyword}'
+    );
+}
+
+function createCategoriesXml(
+    products:
+        FeedProduct[],
 ): string {
     const categoryMap =
         new Map<
@@ -576,117 +1065,142 @@ function createFeedXml(
             string
         >();
 
-    products.forEach(
-        (product) => {
-            categoryMap.set(
-                product.categoryId,
-                product.categoryName,
-            );
-        },
-    );
-
-    if (
-        !categoryMap.has(
-            DEFAULT_CATEGORY_ID,
-        )
-    ) {
+    for (
+        const product of products
+        ) {
         categoryMap.set(
-            DEFAULT_CATEGORY_ID,
-            'Сельскохозяйственная техника',
+            product.categoryId,
+            product.categoryName,
         );
     }
 
-    const categoriesXml =
-        Array.from(
-            categoryMap.entries(),
+    return Array.from(
+        categoryMap.entries(),
+    )
+        .sort(
+            (
+                [firstId],
+                [secondId],
+            ) =>
+                Number(
+                    firstId,
+                ) -
+                Number(
+                    secondId,
+                ),
         )
-            .map(
-                ([
-                     id,
-                     name,
-                 ]) =>
-                    `      <category id="${escapeXml(
-                        id,
-                    )}">${escapeXml(
-                        name,
-                    )}</category>`,
-            )
-            .join('\n');
+        .map(
+            ([
+                 id,
+                 name,
+             ]) =>
+                `      <category id="${escapeXml(
+                    id,
+                )}">${escapeXml(
+                    name,
+                )}</category>`,
+        )
+        .join('\n');
+}
 
-    const offersXml =
-        products
-            .map((product) => {
-                const pageUrl =
-                    `${SITE_URL}/catalog/` +
-                    encodeURIComponent(
-                        product.slug,
-                    );
+function createOfferXml(
+    product:
+        FeedProduct,
+): string {
+    const optionalElements:
+        string[] = [];
 
-                const trackingUrl =
-                    `${pageUrl}` +
-                    `?utm_source=yandex` +
-                    `&utm_medium=cpc` +
-                    `&utm_campaign={campaign_id}` +
-                    `&utm_content=feed_${encodeURIComponent(
-                        product.slug,
-                    )}_{ad_id}_{source_type}_{device_type}` +
-                    `&utm_term={keyword}`;
+    if (
+        product.brandName
+    ) {
+        optionalElements.push(
+            `        <vendor>${escapeXml(
+                product.brandName,
+            )}</vendor>`,
+        );
+    }
 
-                const condition =
-                    product.type ===
-                    'new'
-                        ? 'Новая'
-                        : 'Б/У';
+    if (
+        product.sku
+    ) {
+        optionalElements.push(
+            `        <vendorCode>${escapeXml(
+                product.sku,
+            )}</vendorCode>`,
+        );
+    }
 
-                const optionalXml = [
-                    product.brandName
-                        ? `        <vendor>${escapeXml(
-                            product.brandName,
-                        )}</vendor>`
-                        : '',
+    if (
+        product.year
+    ) {
+        optionalElements.push(
+            `        <param name="Год выпуска">${escapeXml(
+                product.year,
+            )}</param>`,
+        );
+    }
 
-                    product.sku
-                        ? `        <vendorCode>${escapeXml(
-                            product.sku,
-                        )}</vendorCode>`
-                        : '',
+    /*
+     * Не подставляем Б/У по умолчанию.
+     * Параметр выводится только тогда,
+     * когда type заполнен в Strapi.
+     */
+    if (
+        product.condition
+    ) {
+        optionalElements.push(
+            `        <param name="Состояние">${escapeXml(
+                product.condition,
+            )}</param>`,
+        );
+    }
 
-                    product.year
-                        ? `        <param name="Год">${escapeXml(
-                            product.year,
-                        )}</param>`
-                        : '',
+    const optionalXml =
+        optionalElements.length
+            ? `\n${optionalElements.join(
+                '\n',
+            )}`
+            : '';
 
-                    `        <param name="Состояние">${escapeXml(
-                        condition,
-                    )}</param>`,
-                ]
-                    .filter(Boolean)
-                    .join('\n');
-
-                return `      <offer id="${escapeXml(
-                    product.id,
-                )}" available="true">
+    return `      <offer id="${escapeXml(
+        product.id,
+    )}" available="true">
         <url>${escapeXml(
-                    trackingUrl,
-                )}</url>
+        createTrackingUrl(
+            product,
+        ),
+    )}</url>
         <price>${product.priceRub}</price>
         <currencyId>RUB</currencyId>
         <categoryId>${escapeXml(
-                    product.categoryId,
-                )}</categoryId>
+        product.categoryId,
+    )}</categoryId>
         <picture>${escapeXml(
-                    product.imageUrl,
-                )}</picture>
+        product.imageUrl,
+    )}</picture>
         <name>${escapeXml(
-                    product.title,
-                )}</name>
+        product.title,
+    )}</name>
         <description>${escapeXml(
-                    product.description,
-                )}</description>
-${optionalXml}
+        product.description,
+    )}</description>${optionalXml}
       </offer>`;
-            })
+}
+
+function createFeedXml(
+    products:
+        FeedProduct[],
+): string {
+    const categoriesXml =
+        createCategoriesXml(
+            products,
+        );
+
+    const offersXml =
+        products
+            .map(
+                createOfferXml,
+            )
             .join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
@@ -716,7 +1230,8 @@ export default async function handler(
     res: any,
 ) {
     if (
-        req.method !== 'GET'
+        req.method !==
+        'GET'
     ) {
         res.setHeader(
             'Allow',
@@ -731,12 +1246,12 @@ export default async function handler(
     }
 
     try {
-        const rubRate =
-            await fetchCurrencyRate();
+        const currencyRates =
+            await fetchCurrencyRates();
 
         const products =
             await fetchAllProducts(
-                rubRate,
+                currencyRates,
             );
 
         const xml =
@@ -752,6 +1267,11 @@ export default async function handler(
         res.setHeader(
             'Cache-Control',
             'public, s-maxage=1800, stale-while-revalidate=3600',
+        );
+
+        res.setHeader(
+            'X-Content-Type-Options',
+            'nosniff',
         );
 
         return res
