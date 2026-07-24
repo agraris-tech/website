@@ -1,5 +1,6 @@
 const API_URL = "https://cozy-action-02025ea19f.strapiapp.com/api";
-
+const STRAPI_ORIGIN =
+    API_URL.replace(/\/api\/?$/, '');
 
 export async function getEquipmentCards() {
     const res = await fetch(
@@ -37,10 +38,23 @@ export async function getBrands(params?: { limit?: number }) {
     return Array.isArray(json.data) ? json.data : [];
 }
 
-function getMediaUrl(url?: string | null) {
-    if (!url) return "";
-    if (url.startsWith("http")) return url;
-    return `http://localhost:1337${url}`;
+function getMediaUrl(
+    url?: string | null,
+): string {
+    if (!url) {
+        return '';
+    }
+
+    if (
+        url.startsWith('http://') ||
+        url.startsWith('https://')
+    ) {
+        return url;
+    }
+
+    return `${STRAPI_ORIGIN}${
+        url.startsWith('/') ? '' : '/'
+    }${url}`;
 }
 
 export async function getSiteSettings() {
@@ -421,4 +435,205 @@ export async function getProducts(params?: {
             },
         },
     };
+}
+
+
+export async function getNewsArticles(params?: {
+    page?: number;
+    pageSize?: number;
+}) {
+    const page = params?.page ?? 1;
+    const pageSize = params?.pageSize ?? 10;
+
+    const searchParams = new URLSearchParams();
+
+    searchParams.set(
+        'filters[isActive][$eq]',
+        'true',
+    );
+
+    /*
+     * Сначала закреплённые новости,
+     * затем остальные по дате.
+     */
+    searchParams.set(
+        'sort[0]',
+        'featured:desc',
+    );
+
+    searchParams.set(
+        'sort[1]',
+        'featuredOrder:asc',
+    );
+
+    searchParams.set(
+        'sort[2]',
+        'publishedDate:desc',
+    );
+
+    /*
+     * Настоящая серверная пагинация.
+     * Strapi возвращает только 10 записей.
+     */
+    searchParams.set(
+        'pagination[page]',
+        String(page),
+    );
+
+    searchParams.set(
+        'pagination[pageSize]',
+        String(pageSize),
+    );
+
+    searchParams.set(
+        'populate[0]',
+        'cover',
+    );
+
+    const res = await fetch(
+        `${API_URL}/news-articles?${searchParams.toString()}`,
+    );
+
+    const json = await res.json();
+
+    if (!res.ok) {
+        console.error(
+            'Strapi news error:',
+            json,
+        );
+
+        return {
+            data: [],
+            meta: {
+                pagination: {
+                    page: 1,
+                    pageSize,
+                    pageCount: 1,
+                    total: 0,
+                },
+            },
+        };
+    }
+
+    return {
+        data: Array.isArray(json.data)
+            ? json.data
+            : [],
+
+        meta: json.meta ?? {
+            pagination: {
+                page,
+                pageSize,
+                pageCount: 1,
+                total: 0,
+            },
+        },
+    };
+}
+
+
+export async function getNewsArticleBySlug(
+    slug: string,
+) {
+    const searchParams =
+        new URLSearchParams();
+
+    searchParams.set(
+        'filters[slug][$eq]',
+        slug,
+    );
+
+    searchParams.set(
+        'filters[isActive][$eq]',
+        'true',
+    );
+
+    searchParams.set(
+        'populate[0]',
+        'cover',
+    );
+
+    const res = await fetch(
+        `${API_URL}/news-articles?${searchParams.toString()}`,
+    );
+
+    const json = await res.json();
+
+    if (!res.ok) {
+        console.error(
+            'Strapi news article error:',
+            json,
+        );
+
+        return null;
+    }
+
+    return Array.isArray(json.data)
+        ? json.data[0] ?? null
+        : null;
+}
+
+export async function getRelatedNews(params: {
+    category: string;
+    excludedSlug: string;
+    limit?: number;
+}) {
+    const limit = params.limit ?? 3;
+
+    const searchParams =
+        new URLSearchParams();
+
+    searchParams.set(
+        'filters[isActive][$eq]',
+        'true',
+    );
+
+    searchParams.set(
+        'filters[category][$eq]',
+        params.category,
+    );
+
+    searchParams.set(
+        'filters[slug][$ne]',
+        params.excludedSlug,
+    );
+
+    searchParams.set(
+        'sort[0]',
+        'publishedDate:desc',
+    );
+
+    searchParams.set(
+        'pagination[page]',
+        '1',
+    );
+
+    searchParams.set(
+        'pagination[pageSize]',
+        String(limit),
+    );
+
+    searchParams.set(
+        'populate[0]',
+        'cover',
+    );
+
+    const res = await fetch(
+        `${API_URL}/news-articles?${searchParams.toString()}`,
+    );
+
+    const json = await res.json();
+
+    if (!res.ok) {
+        console.error(
+            'Strapi related news error:',
+            json,
+        );
+
+        return [];
+    }
+
+    return Array.isArray(json.data)
+        ? json.data
+        : [];
 }

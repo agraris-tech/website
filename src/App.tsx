@@ -101,7 +101,7 @@ export default function App() {
                                     />
 
                                     <Route
-                                        path="/news/:id"
+                                        path="/news/:slug"
                                         element={
                                             <ResponsivePageWrapper
                                                 desktop={<NewsDetailPage />}

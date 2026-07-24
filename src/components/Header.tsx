@@ -3,11 +3,13 @@ import {
   X,
   Phone,
   Mail,
+  Clock3,
   ChevronDown,
 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+
 
 import { Button } from './ui/button';
 
@@ -47,6 +49,8 @@ type NavItem = {
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [equipmentMenuOpen, setEquipmentMenuOpen] =
+      useState(false);
+  const [mobileHoursOpen, setMobileHoursOpen] =
       useState(false);
 
   const [settings, setSettings] =
@@ -133,12 +137,15 @@ export function Header() {
   return (
       <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-4">
-          <div className="border-b border-gray-100 py-2">
-            <div className="header-top-row">
-              <div className="header-contacts">
+          <div className="header-contact-bar">
+            {/* Обычная версия от 400px */}
+            <div className="header-contact-full">
+              <div className="header-contact-links">
                 {contact?.phone && phoneHref && (
                     <a
                         href={phoneHref}
+                        aria-label={`Позвонить: ${contact.phone}`}
+                        className="header-contact-link"
                         onClick={(event) => {
                           event.preventDefault();
 
@@ -147,16 +154,20 @@ export function Header() {
                               phoneHref,
                           );
                         }}
-                        className="flex items-center gap-2 whitespace-nowrap text-sm text-gray-600 transition-colors hover:text-green-700"
                     >
-                      <Phone className="h-4 w-4 shrink-0"/>
-                      <span>{contact.phone}</span>
+                      <Phone/>
+
+                      <span>
+            {contact.phone}
+          </span>
                     </a>
                 )}
 
                 {contact?.email && emailHref && (
                     <a
                         href={emailHref}
+                        aria-label={`Написать на email: ${contact.email}`}
+                        className="header-contact-link"
                         onClick={(event) => {
                           event.preventDefault();
 
@@ -165,11 +176,10 @@ export function Header() {
                               emailHref,
                           );
                         }}
-                        className="flex min-w-0 items-center gap-2 text-sm text-gray-600 transition-colors hover:text-green-700"
                     >
-                      <Mail className="h-4 w-4 shrink-0"/>
+                      <Mail/>
 
-                      <span className="break-all">
+                      <span>
             {contact.email}
           </span>
                     </a>
@@ -177,8 +187,103 @@ export function Header() {
               </div>
 
               {contact?.workingHours && (
-                  <div className="header-working-hours">
+                  <div className="header-contact-hours">
                     {contact.workingHours}
+                  </div>
+              )}
+            </div>
+
+            {/* Компактная версия до 399px */}
+            <div className="header-contact-compact">
+              {contact?.phone && phoneHref && (
+                  <a
+                      href={phoneHref}
+                      aria-label={`Позвонить: ${contact.phone}`}
+                      title={`Позвонить: ${contact.phone}`}
+                      className="header-contact-icon"
+                      onClick={(event) => {
+                        event.preventDefault();
+
+                        setMobileHoursOpen(false);
+
+                        /*
+                         * Сохраняем текущую конверсию
+                         * телефонного звонка.
+                         */
+                        trackContactAndNavigate(
+                            'phone',
+                            phoneHref,
+                        );
+                      }}
+                  >
+                    <Phone/>
+                  </a>
+              )}
+
+              {contact?.email && emailHref && (
+                  <a
+                      href={emailHref}
+                      aria-label={`Написать на email: ${contact.email}`}
+                      title={`Написать: ${contact.email}`}
+                      className="header-contact-icon"
+                      onClick={(event) => {
+                        event.preventDefault();
+
+                        setMobileHoursOpen(false);
+
+                        /*
+                         * Сохраняем текущую конверсию
+                         * перехода на email.
+                         */
+                        trackContactAndNavigate(
+                            'email',
+                            emailHref,
+                        );
+                      }}
+                  >
+                    <Mail/>
+                  </a>
+              )}
+
+              {contact?.workingHours && (
+                  <div className="header-hours-mobile">
+                    <button
+                        type="button"
+                        aria-label={
+                          mobileHoursOpen
+                              ? 'Скрыть режим работы'
+                              : 'Показать режим работы'
+                        }
+                        aria-expanded={mobileHoursOpen}
+                        title="Режим работы"
+                        className={
+                          mobileHoursOpen
+                              ? 'header-contact-icon header-contact-icon--active'
+                              : 'header-contact-icon'
+                        }
+                        onClick={() => {
+                          setMobileHoursOpen(
+                              (current) => !current,
+                          );
+                        }}
+                    >
+                      <Clock3/>
+                    </button>
+
+                    {mobileHoursOpen && (
+                        <div
+                            className="header-hours-popover"
+                            role="status"
+                        >
+                          <div className="header-hours-popover__title">
+                            Режим работы
+                          </div>
+
+                          <div className="header-hours-popover__text">
+                            {contact.workingHours}
+                          </div>
+                        </div>
+                    )}
                   </div>
               )}
             </div>

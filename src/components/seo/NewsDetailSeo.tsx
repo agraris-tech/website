@@ -10,87 +10,294 @@ import {
     truncateText,
 } from './seoConfig';
 
+const DEFAULT_BASE_URL =
+    'https://agraristech.by';
+
 export type NewsDetailSeoArticle = {
     title: string;
     slug: string;
 
-    description?: string;
-    shortDescription?: string;
+    metaTitle?: string;
+    metaDescription?: string;
+
     excerpt?: string;
+
+    /*
+     * Единственное поле content.
+     * В нём хранится Markdown.
+     */
     content?: string;
 
     image?: string;
+    imageAlt?: string;
 
     publishedAt?: string;
     updatedAt?: string;
 
     authorName?: string;
     categoryName?: string;
+
+    searchKeywords?: string;
+
+    schemaType?:
+        | 'Article'
+        | 'NewsArticle'
+        | 'BlogPosting';
 };
 
 type NewsDetailSeoProps = {
     article: NewsDetailSeoArticle;
 };
 
+function stripMarkdown(
+    value: string,
+): string {
+    return value
+        /*
+         * Многострочные блоки кода.
+         */
+        .replace(
+            /```[\s\S]*?```/g,
+            ' ',
+        )
+
+        /*
+         * Изображения.
+         * Оставляем alt.
+         */
+        .replace(
+            /!\[([^\]]*)]\([^)]*\)/g,
+            '$1',
+        )
+
+        /*
+         * Ссылки.
+         * Оставляем текст ссылки.
+         */
+        .replace(
+            /\[([^\]]+)]\([^)]*\)/g,
+            '$1',
+        )
+
+        /*
+         * Заголовки.
+         */
+        .replace(
+            /^\s{0,3}#{1,6}\s+/gm,
+            '',
+        )
+
+        /*
+         * Цитаты.
+         */
+        .replace(
+            /^\s*>\s?/gm,
+            '',
+        )
+
+        /*
+         * Маркированные списки.
+         */
+        .replace(
+            /^\s*[-*+]\s+/gm,
+            '',
+        )
+
+        /*
+         * Нумерованные списки.
+         */
+        .replace(
+            /^\s*\d+[.)]\s+/gm,
+            '',
+        )
+
+        /*
+         * Inline code.
+         */
+        .replace(
+            /`([^`]+)`/g,
+            '$1',
+        )
+
+        /*
+         * Bold, italic, strikethrough.
+         */
+        .replace(
+            /[*_~]/g,
+            '',
+        )
+
+        /*
+         * Нормализуем пробелы.
+         */
+        .replace(
+            /\n+/g,
+            ' ',
+        )
+        .replace(
+            /\s+/g,
+            ' ',
+        )
+        .trim();
+}
+
+function createKeywordList(
+    value?: string,
+): string[] {
+    if (!value) {
+        return [];
+    }
+
+    return value
+        .split(',')
+        .map(
+            (keyword) =>
+                keyword.trim(),
+        )
+        .filter(Boolean);
+}
+
 export default function NewsDetailSeo({
                                           article,
                                       }: NewsDetailSeoProps) {
-    const region = getCurrentRegion();
+    const region =
+        getCurrentRegion();
+
+    const baseUrl =
+        region.baseUrl.replace(
+            /\/+$/,
+            '',
+        );
 
     const pathname =
         `/news/${article.slug}`;
 
-    const canonicalUrl = buildRegionalUrl(
-        region,
-        pathname,
-    );
+    const canonicalUrl =
+        buildRegionalUrl(
+            region,
+            pathname,
+        );
 
-    const alternateUrls =
-        getAlternateUrls(pathname);
+    /*
+     * Региональные версии статьи.
+     */
+    const regionalAlternateUrls =
+        getAlternateUrls(pathname)
+            .filter(
+                (alternate) =>
+                    alternate.hrefLang !==
+                    'x-default',
+            );
 
-    const plainDescription = stripHtml(
-        article.shortDescription ||
+    /*
+     * Беларусь используется
+     * как версия по умолчанию.
+     */
+    const alternateUrls = [
+        ...regionalAlternateUrls,
+
+        {
+            hrefLang:
+                'x-default',
+
+            href:
+                `${DEFAULT_BASE_URL}${pathname}`,
+        },
+    ];
+
+    const logoUrl =
+        makeAbsoluteUrl(
+            region.logoUrl,
+            baseUrl,
+        );
+
+    const descriptionSource =
+        article.metaDescription ||
         article.excerpt ||
-        article.description ||
         article.content ||
-        '',
-    );
+        '';
+
+    const plainDescription =
+        stripHtml(
+            stripMarkdown(
+                descriptionSource,
+            ),
+        );
 
     const seoTitle =
+        article.metaTitle?.trim() ||
         `${article.title} | AGRARIS`;
 
-    const seoDescription = truncateText(
-        plainDescription ||
-        `${article.title}. Новости и материалы о сельскохозяйственной технике от AGRARIS.`,
-    );
+    const seoDescription =
+        truncateText(
+            plainDescription ||
+            `${article.title}. Новости, обзоры и материалы о сельскохозяйственной технике от AGRARIS.`,
+        );
 
-    const imageUrl = article.image
-        ? makeAbsoluteUrl(
-            article.image,
-            region.baseUrl,
-        )
-        : region.logoUrl;
+    const imageUrl =
+        article.image
+            ? makeAbsoluteUrl(
+                article.image,
+                baseUrl,
+            )
+            : logoUrl;
+
+    const imageAlt =
+        article.imageAlt?.trim() ||
+        article.title;
+
+    const authorName =
+        article.authorName?.trim() ||
+        region.siteName;
+
+    const keywordList =
+        createKeywordList(
+            article.searchKeywords,
+        );
+
+    const seoKeywords =
+        keywordList.join(', ');
 
     const structuredData = {
-        '@context': 'https://schema.org',
+        '@context':
+            'https://schema.org',
 
-        '@type': 'NewsArticle',
+        '@type':
+            article.schemaType ||
+            'NewsArticle',
 
-        '@id': `${canonicalUrl}#article`,
+        '@id':
+            `${canonicalUrl}#article`,
 
-        headline: article.title,
-        description: seoDescription,
+        headline:
+        article.title,
 
-        url: canonicalUrl,
+        description:
+        seoDescription,
+
+        url:
+        canonicalUrl,
 
         mainEntityOfPage: {
-            '@type': 'WebPage',
-            '@id': canonicalUrl,
+            '@type':
+                'WebPage',
+
+            '@id':
+            canonicalUrl,
         },
 
-        image: [imageUrl],
+        image: [
+            imageUrl,
+        ],
 
-        inLanguage: region.htmlLang,
+        thumbnailUrl:
+        imageUrl,
+
+        inLanguage:
+        region.htmlLang,
+
+        isAccessibleForFree:
+            true,
 
         ...(article.publishedAt
             ? {
@@ -99,12 +306,16 @@ export default function NewsDetailSeo({
             }
             : {}),
 
-        ...(article.updatedAt
-            ? {
-                dateModified:
-                article.updatedAt,
-            }
-            : {}),
+        ...(
+            article.updatedAt ||
+            article.publishedAt
+                ? {
+                    dateModified:
+                        article.updatedAt ||
+                        article.publishedAt,
+                }
+                : {}
+        ),
 
         ...(article.categoryName
             ? {
@@ -113,42 +324,83 @@ export default function NewsDetailSeo({
             }
             : {}),
 
+        ...(keywordList.length > 0
+            ? {
+                keywords:
+                keywordList,
+            }
+            : {}),
+
         author: {
-            '@type': 'Organization',
+            '@type':
+                'Organization',
+
+            '@id':
+                `${baseUrl}/#organization`,
 
             name:
-                article.authorName ||
-                region.siteName,
+            authorName,
 
-            url: region.baseUrl,
+            url:
+            baseUrl,
         },
 
         publisher: {
-            '@type': 'Organization',
+            '@type':
+                'Organization',
 
             '@id':
-                `${region.baseUrl}` +
-                '/#organization',
+                `${baseUrl}/#organization`,
 
-            name: region.siteName,
-            url: region.baseUrl,
+            name:
+            region.siteName,
+
+            url:
+            baseUrl,
 
             logo: {
-                '@type': 'ImageObject',
-                url: region.logoUrl,
+                '@type':
+                    'ImageObject',
+
+                url:
+                logoUrl,
             },
         },
     };
 
     return (
         <Helmet prioritizeSeoTags>
-            <html lang={region.htmlLang}/>
+            <html
+                lang={
+                    region.htmlLang
+                }
+            />
 
-            <title>{seoTitle}</title>
+            <title>
+                {seoTitle}
+            </title>
 
             <meta
                 name="description"
-                content={seoDescription}
+                content={
+                    seoDescription
+                }
+            />
+
+            {seoKeywords && (
+                <meta
+                    name="keywords"
+                    content={
+                        seoKeywords
+                    }
+                />
+            )}
+
+            <meta
+                name="author"
+                content={
+                    authorName
+                }
             />
 
             <meta
@@ -158,7 +410,9 @@ export default function NewsDetailSeo({
 
             <link
                 rel="canonical"
-                href={canonicalUrl}
+                href={
+                    canonicalUrl
+                }
             />
 
             {alternateUrls.map(
@@ -171,7 +425,9 @@ export default function NewsDetailSeo({
                         hrefLang={
                             alternate.hrefLang
                         }
-                        href={alternate.href}
+                        href={
+                            alternate.href
+                        }
                     />
                 ),
             )}
@@ -183,38 +439,78 @@ export default function NewsDetailSeo({
 
             <meta
                 property="og:site_name"
-                content={region.siteName}
+                content={
+                    region.siteName
+                }
             />
 
             <meta
                 property="og:locale"
-                content={region.ogLocale}
+                content={
+                    region.ogLocale
+                }
             />
 
             <meta
                 property="og:title"
-                content={seoTitle}
+                content={
+                    seoTitle
+                }
             />
 
             <meta
                 property="og:description"
-                content={seoDescription}
+                content={
+                    seoDescription
+                }
             />
 
             <meta
                 property="og:url"
-                content={canonicalUrl}
+                content={
+                    canonicalUrl
+                }
             />
 
             <meta
                 property="og:image"
-                content={imageUrl}
+                content={
+                    imageUrl
+                }
             />
 
             <meta
                 property="og:image:alt"
-                content={article.title}
+                content={
+                    imageAlt
+                }
             />
+
+            {article.categoryName && (
+                <meta
+                    property="article:section"
+                    content={
+                        article.categoryName
+                    }
+                />
+            )}
+
+            {keywordList.map(
+                (
+                    keyword,
+                    index,
+                ) => (
+                    <meta
+                        key={
+                            `${keyword}-${index}`
+                        }
+                        property="article:tag"
+                        content={
+                            keyword
+                        }
+                    />
+                ),
+            )}
 
             {article.publishedAt && (
                 <meta
@@ -241,17 +537,30 @@ export default function NewsDetailSeo({
 
             <meta
                 name="twitter:title"
-                content={seoTitle}
+                content={
+                    seoTitle
+                }
             />
 
             <meta
                 name="twitter:description"
-                content={seoDescription}
+                content={
+                    seoDescription
+                }
             />
 
             <meta
                 name="twitter:image"
-                content={imageUrl}
+                content={
+                    imageUrl
+                }
+            />
+
+            <meta
+                name="twitter:image:alt"
+                content={
+                    imageAlt
+                }
             />
 
             <script type="application/ld+json">

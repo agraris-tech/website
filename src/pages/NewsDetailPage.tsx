@@ -1,50 +1,406 @@
 import {
-    useParams,
+    useEffect,
+    useState,
+} from 'react';
+
+import {
     Link,
-    useNavigate,
+    useParams,
 } from 'react-router-dom';
 
 import { Helmet } from 'react-helmet-async';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 import {
-    Calendar,
-    Clock,
     ArrowLeft,
+    ArrowRight,
+    CalendarDays,
+    Newspaper,
+    UserRound,
 } from 'lucide-react';
 
 import {
-    Card,
-    CardContent,
-} from '../components/ui/card';
+    BlocksRenderer,
+    type BlocksContent,
+} from '@strapi/blocks-react-renderer';
 
-import { Button } from '../components/ui/button';
-import { newsData } from '../data/newsData';
+import {
+    getNewsArticleBySlug,
+    getRelatedNews,
+} from '../services/strapi';
 
 import NewsDetailSeo from '../components/seo/NewsDetailSeo';
+import {AppPageLoader} from "../components/AppPageLoader";
+
+
+const STRAPI_ORIGIN =
+    'https://cozy-action-02025ea19f.strapiapp.com';
+
+const FALLBACK_IMAGE =
+    '/images/placeholder-equipment.png';
+
+type RawNewsArticle = {
+    id: number;
+    documentId?: string;
+
+    title?: string;
+    slug?: string;
+
+    excerpt?: string;
+    content?: string | null;
+
+    category?: string;
+
+    publishedDate?: string | null;
+    publishedAt?: string | null;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+
+    authorName?: string;
+
+    metaTitle?: string | null;
+    metaDescription?: string | null;
+    searchKeywords?: string | null;
+
+    cover?: {
+        url?: string | null;
+        alternativeText?: string | null;
+    } | null;
+};
+
+type NewsArticle = {
+    id: number;
+    documentId: string;
+
+    title: string;
+    slug: string;
+
+    excerpt: string;
+    content?: string | null;
+
+    category: string;
+
+    publishedDate: string | null;
+    updatedAt: string | null;
+
+    authorName: string;
+
+    metaTitle: string | null;
+    metaDescription: string | null;
+    searchKeywords: string | null;
+
+    image: string;
+    imageAlt: string;
+};
+
+type RelatedNewsItem = {
+    id: number;
+    documentId: string;
+
+    title: string;
+    slug: string;
+
+    category: string;
+    publishedDate: string | null;
+
+    image: string;
+    imageAlt: string;
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+    company_news: 'Новости рынка и компании',
+    equipment_reviews: 'Обзоры техники',
+    technologies: 'Технологии',
+    events: 'Выставки и события',
+    tips: 'Советы аграриям',
+};
+
+function getMediaUrl(
+    url?: string | null,
+): string {
+    if (!url) {
+        return '';
+    }
+
+    if (
+        url.startsWith('http://') ||
+        url.startsWith('https://')
+    ) {
+        return url;
+    }
+
+    return `${STRAPI_ORIGIN}${
+        url.startsWith('/') ? '' : '/'
+    }${url}`;
+}
+
+function getCategoryLabel(
+    category?: string,
+): string {
+    if (!category) {
+        return 'Новости AGRARIS';
+    }
+
+    return (
+        CATEGORY_LABELS[category] ||
+        category
+    );
+}
+
+function formatNewsDate(
+    value?: string | null,
+): string {
+    if (!value) {
+        return '';
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return '';
+    }
+
+    return new Intl.DateTimeFormat(
+        'ru-RU',
+        {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+        },
+    ).format(date);
+}
+
+function mapNewsArticle(
+    item: RawNewsArticle,
+): NewsArticle {
+    const title =
+        item.title?.trim() ||
+        'Новость AGRARIS';
+
+    return {
+        id: item.id,
+
+        documentId:
+            item.documentId ||
+            String(item.id),
+
+        title,
+
+        slug:
+            item.slug ||
+            String(item.id),
+
+        excerpt:
+            item.excerpt?.trim() || '',
+
+        content:
+            typeof item.content === 'string'
+                ? item.content.trim()
+                : '',
+
+        category:
+            item.category || '',
+
+        publishedDate:
+            item.publishedDate ||
+            item.publishedAt ||
+            item.createdAt ||
+            null,
+
+        updatedAt:
+            item.updatedAt || null,
+
+        authorName:
+            item.authorName?.trim() ||
+            'AGRARIS',
+
+        metaTitle:
+            item.metaTitle ?? null,
+
+        metaDescription:
+            item.metaDescription ?? null,
+
+        searchKeywords:
+            item.searchKeywords?.trim() ||
+            null,
+
+        image:
+            getMediaUrl(
+                item.cover?.url,
+            ) || FALLBACK_IMAGE,
+
+        imageAlt:
+            item.cover
+                ?.alternativeText
+                ?.trim() ||
+            title,
+    };
+}
+
+function mapRelatedNews(
+    item: RawNewsArticle,
+): RelatedNewsItem {
+    const title =
+        item.title?.trim() ||
+        'Новость AGRARIS';
+
+    return {
+        id: item.id,
+
+        documentId:
+            item.documentId ||
+            String(item.id),
+
+        title,
+
+        slug:
+            item.slug ||
+            String(item.id),
+
+        category:
+            item.category || '',
+
+        publishedDate:
+            item.publishedDate ||
+            item.publishedAt ||
+            item.createdAt ||
+            null,
+
+        image:
+            getMediaUrl(
+                item.cover?.url,
+            ) || FALLBACK_IMAGE,
+
+        imageAlt:
+            item.cover
+                ?.alternativeText
+                ?.trim() ||
+            title,
+    };
+}
 
 export function NewsDetailPage() {
-    const { id } = useParams<{
-        id: string;
+    const { slug } = useParams<{
+        slug: string;
     }>();
 
-    const navigate = useNavigate();
+    const [article, setArticle] =
+        useState<NewsArticle | null>(
+            null,
+        );
 
-    const newsId = Number.parseInt(
-        id || '0',
-        10,
+    const [
+        relatedNews,
+        setRelatedNews,
+    ] = useState<RelatedNewsItem[]>(
+        [],
     );
 
-    const article = newsData.find(
-        (news) => news.id === newsId,
-    );
+    const [loading, setLoading] =
+        useState(true);
 
-    /*
-     * Страница отсутствующей новости.
-     *
-     * Пока React SPA, сервер, вероятно,
-     * возвращает HTTP 200, поэтому хотя бы
-     * ставим noindex.
-     */
+    useEffect(() => {
+        let cancelled = false;
+
+        async function loadArticle() {
+            if (!slug) {
+                setLoading(false);
+                return;
+            }
+
+            try {
+                setLoading(true);
+
+                const rawArticle =
+                    await getNewsArticleBySlug(
+                        slug,
+                    );
+
+                if (cancelled) {
+                    return;
+                }
+
+                if (!rawArticle) {
+                    setArticle(null);
+                    setRelatedNews([]);
+                    return;
+                }
+
+                const mappedArticle =
+                    mapNewsArticle(
+                        rawArticle,
+                    );
+
+                setArticle(mappedArticle);
+
+                if (!mappedArticle.category) {
+                    setRelatedNews([]);
+                    return;
+                }
+
+                const relatedResult =
+                    await getRelatedNews({
+                        category:
+                        mappedArticle.category,
+
+                        excludedSlug:
+                        mappedArticle.slug,
+
+                        limit: 3,
+                    });
+
+                if (cancelled) {
+                    return;
+                }
+
+                const relatedItems =
+                    Array.isArray(
+                        relatedResult,
+                    )
+                        ? relatedResult
+                        : [];
+
+                setRelatedNews(
+                    relatedItems.map(
+                        (
+                            item: RawNewsArticle,
+                        ) =>
+                            mapRelatedNews(
+                                item,
+                            ),
+                    ),
+                );
+            } catch (error) {
+                console.error(
+                    'Failed to load news article:',
+                    error,
+                );
+
+                if (!cancelled) {
+                    setArticle(null);
+                    setRelatedNews([]);
+                }
+            } finally {
+                if (!cancelled) {
+                    setLoading(false);
+                }
+            }
+        }
+
+        loadArticle().catch(
+            console.error,
+        );
+
+        return () => {
+            cancelled = true;
+        };
+    }, [slug]);
+
+    if (loading) {
+        return <AppPageLoader />;
+    }
+
     if (!article) {
         return (
             <>
@@ -59,47 +415,49 @@ export function NewsDetailPage() {
                     />
                 </Helmet>
 
-                <div className="bg-gray-50 min-h-screen py-12">
-                    <div className="container mx-auto px-4 text-center">
-                        <h1 className="text-4xl mb-4">
-                            Статья не найдена
-                        </h1>
+                <main className="news-detail-not-found">
+                    <Newspaper />
 
-                        <Link to="/news">
-                            <Button className="bg-green-700 hover:bg-green-800">
-                                <ArrowLeft className="w-4 h-4 mr-2" />
+                    <h1>
+                        Статья не найдена
+                    </h1>
 
-                                Вернуться к новостям
-                            </Button>
-                        </Link>
-                    </div>
-                </div>
+                    <p>
+                        Возможно, материал был
+                        удалён или адрес указан
+                        неправильно.
+                    </p>
+
+                    <Link
+                        to="/news"
+                        className="news-detail-not-found__button"
+                    >
+                        <ArrowLeft />
+
+                        Вернуться к новостям
+                    </Link>
+                </main>
             </>
         );
     }
-
-    const relatedNews = newsData
-        .filter(
-            (news) =>
-                news.id !== article.id &&
-                news.category === article.category,
-        )
-        .slice(0, 3);
 
     return (
         <>
             <NewsDetailSeo
                 article={{
-                    title: article.title,
+                    title:
+                    article.title,
 
-                    /*
-                     * Пока используем ID как часть URL.
-                     *
-                     * Получится:
-                     * /news/1
-                     * /news/2
-                     */
-                    slug: String(article.id),
+                    slug:
+                    article.slug,
+
+                    metaTitle:
+                        article.metaTitle ||
+                        undefined,
+
+                    metaDescription:
+                        article.metaDescription ||
+                        undefined,
 
                     excerpt:
                     article.excerpt,
@@ -110,155 +468,323 @@ export function NewsDetailPage() {
                     image:
                     article.image,
 
-                    categoryName:
-                    article.category,
+                    imageAlt:
+                    article.imageAlt,
+
+                    publishedAt:
+                        article.publishedDate ||
+                        undefined,
+
+                    updatedAt:
+                        article.updatedAt ||
+                        undefined,
 
                     authorName:
-                        'AGRARIS',
+                    article.authorName,
 
-                    /*
-                     * article.date пока не передаём
-                     * в publishedAt, потому что для
-                     * Schema.org нужна дата ISO:
-                     *
-                     * 2026-07-14T10:00:00+03:00
-                     *
-                     * Обычная строка вида
-                     * "14 июля 2026" не подходит.
-                     */
+                    categoryName:
+                        getCategoryLabel(
+                            article.category,
+                        ),
+
+                    searchKeywords:
+                        article.searchKeywords ||
+                        undefined,
+
+                    schemaType:
+                        article.category ===
+                        'company_news' ||
+                        article.category ===
+                        'events'
+                            ? 'NewsArticle'
+                            : 'Article',
                 }}
             />
 
-            <div className="bg-gray-50 min-h-screen">
-                {/* Hero Image */}
-                <div className="relative h-[400px] overflow-hidden">
-                    <img
-                        src={article.image}
-                        alt={article.title}
-                        className="w-full h-full object-cover"
-                    />
+            <main className="news-detail-page">
+                <section className="news-detail-hero">
+                    <div className="news-detail-shell">
+                        <Link
+                            to="/news"
+                            className="news-detail-back"
+                        >
+                            <ArrowLeft />
 
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                            Назад к новостям
+                        </Link>
 
-                    <div className="absolute bottom-0 left-0 right-0 p-8">
-                        <div className="container mx-auto">
-                            <h1 className="text-4xl text-white mb-4 max-w-4xl">
+                        <header className="news-detail-header">
+                            <div className="news-detail-meta">
+                                <span className="news-detail-category">
+                                    {getCategoryLabel(
+                                        article.category,
+                                    )}
+                                </span>
+
+                                {article.publishedDate && (
+                                    <time
+                                        dateTime={
+                                            article.publishedDate
+                                        }
+                                        className="news-detail-meta-item"
+                                    >
+                                        <CalendarDays />
+
+                                        {formatNewsDate(
+                                            article.publishedDate,
+                                        )}
+                                    </time>
+                                )}
+
+                                <span className="news-detail-meta-item">
+                                    <UserRound />
+
+                                    {article.authorName}
+                                </span>
+                            </div>
+
+                            <h1 className="news-detail-title">
                                 {article.title}
                             </h1>
 
-                            <div className="flex items-center gap-6 text-white/90">
-                                <span className="flex items-center gap-2">
-                                    <Calendar className="w-4 h-4" />
+                            {article.excerpt && (
+                                <p className="news-detail-excerpt">
+                                    {article.excerpt}
+                                </p>
+                            )}
+                        </header>
 
-                                    {article.date}
-                                </span>
-
-                                <span className="flex items-center gap-2">
-                                    <Clock className="w-4 h-4" />
-
-                                    {article.readTime}
-                                </span>
-                            </div>
+                        <div className="news-detail-cover">
+                            <img
+                                src={article.image}
+                                alt={article.imageAlt}
+                            />
                         </div>
                     </div>
-                </div>
+                </section>
 
-                {/* Content */}
-                <div className="container mx-auto px-4 py-12">
-                    <div className="max-w-4xl mx-auto">
-                        <Button
-                            variant="ghost"
-                            onClick={() =>
-                                navigate('/news')
-                            }
-                            className="mb-8 text-green-700 hover:text-green-800"
-                        >
-                            <ArrowLeft className="w-4 h-4 mr-2" />
+                <section className="news-detail-content-section">
+                    <div className="news-detail-content-wrap">
+                        <article className="news-article-card">
+                            <div className="news-article-content">
+                                {article.content ? (
+                                    <ReactMarkdown
+                                        remarkPlugins={[remarkGfm]}
+                                        components={{
+                                            h2: ({children}) => (
+                                                <h2 className="news-article-h2">
+                                                    {children}
+                                                </h2>
+                                            ),
 
-                            Назад к новостям
-                        </Button>
+                                            h3: ({children}) => (
+                                                <h3 className="news-article-h3">
+                                                    {children}
+                                                </h3>
+                                            ),
 
-                        <Card className="mb-12">
-                            <CardContent className="p-8">
-                                <div
-                                    className="
-                                        prose prose-lg max-w-none
-                                        prose-headings:text-gray-900
-                                        prose-headings:font-bold
-                                        prose-h2:text-2xl
-                                        prose-h2:mt-8
-                                        prose-h2:mb-4
-                                        prose-p:text-gray-700
-                                        prose-p:leading-relaxed
-                                        prose-p:mb-4
-                                        prose-ul:list-disc
-                                        prose-ul:pl-6
-                                        prose-ul:mb-4
-                                        prose-li:text-gray-700
-                                        prose-li:mb-2
-                                    "
-                                    dangerouslySetInnerHTML={{
-                                        __html:
-                                            article.content ||
-                                            article.excerpt ||
-                                            '',
-                                    }}
-                                />
-                            </CardContent>
-                        </Card>
+                                            h4: ({children}) => (
+                                                <h4 className="news-article-h4">
+                                                    {children}
+                                                </h4>
+                                            ),
 
-                        {/* Related News */}
-                        {relatedNews.length > 0 && (
-                            <div>
-                                <h2 className="text-2xl mb-6">
-                                    Похожие статьи
+                                            p: ({children}) => (
+                                                <p className="news-article-paragraph">
+                                                    {children}
+                                                </p>
+                                            ),
+
+                                            ul: ({children}) => (
+                                                <ul className="news-article-list news-article-list--unordered">
+                                                    {children}
+                                                </ul>
+                                            ),
+
+                                            ol: ({children}) => (
+                                                <ol className="news-article-list news-article-list--ordered">
+                                                    {children}
+                                                </ol>
+                                            ),
+
+                                            li: ({children}) => (
+                                                <li>{children}</li>
+                                            ),
+
+                                            blockquote: ({children}) => (
+                                                <blockquote className="news-article-quote">
+                                                    {children}
+                                                </blockquote>
+                                            ),
+
+                                            strong: ({children}) => (
+                                                <strong className="news-article-bold">
+                                                    {children}
+                                                </strong>
+                                            ),
+
+                                            a: ({
+                                                    children,
+                                                    href,
+                                                }) => {
+                                                const url = href || '#';
+
+                                                const isExternal =
+                                                    url.startsWith('http://') ||
+                                                    url.startsWith('https://');
+
+                                                return (
+                                                    <a
+                                                        href={url}
+                                                        className="news-article-link"
+                                                        target={
+                                                            isExternal
+                                                                ? '_blank'
+                                                                : undefined
+                                                        }
+                                                        rel={
+                                                            isExternal
+                                                                ? 'noopener noreferrer'
+                                                                : undefined
+                                                        }
+                                                    >
+                                                        {children}
+                                                    </a>
+                                                );
+                                            },
+                                        }}
+                                    >
+                                        {article.content}
+                                    </ReactMarkdown>
+                                ) : (
+                                    <p className="news-article-paragraph">
+                                        {article.excerpt}
+                                    </p>
+                                )}
+                            </div>
+                        </article>
+
+                        <aside className="news-detail-cta">
+                            <div className="news-detail-cta__content">
+                                <h2>
+                                    Нужна техника для вашего хозяйства?
                                 </h2>
 
-                                <div className="grid md:grid-cols-3 gap-6">
-                                    {relatedNews.map(
-                                        (news) => (
-                                            <Link
-                                                to={`/news/${news.id}`}
-                                                key={news.id}
-                                            >
-                                                <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group h-full">
-                                                    <div className="relative h-[150px] overflow-hidden">
-                                                        <img
-                                                            src={
-                                                                news.image
-                                                            }
-                                                            alt={
-                                                                news.title
-                                                            }
-                                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                                        />
-                                                    </div>
-
-                                                    <CardContent className="p-4">
-                                                        <h3 className="text-base mb-2 group-hover:text-green-700 transition-colors line-clamp-2">
-                                                            {
-                                                                news.title
-                                                            }
-                                                        </h3>
-
-                                                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                            <Calendar className="w-3 h-3" />
-
-                                                            {
-                                                                news.date
-                                                            }
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            </Link>
-                                        ),
-                                    )}
-                                </div>
+                                <p>
+                                    Специалисты AGRARIS
+                                    помогут подобрать
+                                    оборудование, рассчитать
+                                    стоимость и организовать
+                                    поставку.
+                                </p>
                             </div>
-                        )}
+
+                            <div className="news-detail-cta__actions">
+                                <Link
+                                    to="/catalog"
+                                    className="news-detail-cta__primary"
+                                >
+                                    Смотреть каталог
+                                </Link>
+
+                                <Link
+                                    to="/contact"
+                                    className="news-detail-cta__secondary"
+                                >
+                                    Получить консультацию
+                                </Link>
+                            </div>
+                        </aside>
                     </div>
-                </div>
-            </div>
+                </section>
+
+                {relatedNews.length > 0 && (
+                    <section className="news-related-section">
+                        <div className="news-related-container">
+                            <div className="news-related-header">
+                                <div>
+                                    <span>
+                                        Читайте также
+                                    </span>
+
+                                    <h2>
+                                        Похожие статьи
+                                    </h2>
+                                </div>
+
+                                <Link
+                                    to="/news"
+                                    className="news-related-all"
+                                >
+                                    Все новости
+
+                                    <ArrowRight/>
+                                </Link>
+                            </div>
+
+                            <div className="news-related-grid">
+                                {relatedNews.map(
+                                    (news) => (
+                                        <Link
+                                            to={`/news/${news.slug}`}
+                                            key={
+                                                news.documentId
+                                            }
+                                            className="news-related-card"
+                                        >
+                                            <div className="news-related-card__image">
+                                            <img
+                                                    src={
+                                                        news.image
+                                                    }
+                                                    alt={
+                                                        news.imageAlt
+                                                    }
+                                                    loading="lazy"
+                                                />
+                                            </div>
+
+                                            <div className="news-related-card__body">
+                                                <div className="news-related-card__meta">
+                                                    <span>
+                                                        {getCategoryLabel(
+                                                            news.category,
+                                                        )}
+                                                    </span>
+
+                                                    {news.publishedDate && (
+                                                        <time
+                                                            dateTime={
+                                                                news.publishedDate
+                                                            }
+                                                        >
+                                                            {formatNewsDate(
+                                                                news.publishedDate,
+                                                            )}
+                                                        </time>
+                                                    )}
+                                                </div>
+
+                                                <h3>
+                                                    {
+                                                        news.title
+                                                    }
+                                                </h3>
+
+                                                <span className="news-related-card__more">
+                                                    Читать статью
+
+                                                    <ArrowRight />
+                                                </span>
+                                            </div>
+                                        </Link>
+                                    ),
+                                )}
+                            </div>
+                        </div>
+                    </section>
+                )}
+            </main>
         </>
     );
 }
