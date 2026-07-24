@@ -5,7 +5,7 @@ import {
     useState,
 } from 'react';
 
-import { trackGoogleAdsLead } from '../lib/googleAds';
+import { trackGoogleAdsLead } from '../lib/googleAdsLead';
 
 type Props = {
     open: boolean;

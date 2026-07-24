@@ -30,7 +30,7 @@ import {
   type ContactChannel,
 } from '../lib/googleAdsContacts';
 
-import { trackGoogleAdsLead } from '../lib/googleAds';
+import { trackGoogleAdsLead } from '../lib/googleAdsLead';
 
 type LeadApiResponse = {
   success: boolean;

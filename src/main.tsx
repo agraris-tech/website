@@ -1,4 +1,5 @@
 import React from 'react';
+
 import ReactDOM from 'react-dom/client';
 
 import {
@@ -7,7 +8,13 @@ import {
 
 import App from './App';
 
+import {
+    initGoogleAds,
+} from './lib/googleAds';
+
 import './index.css';
+
+initGoogleAds();
 
 ReactDOM
     .createRoot(
