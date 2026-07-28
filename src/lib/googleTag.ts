@@ -45,31 +45,23 @@ export function ensureGtag():
     const dataLayer =
         ensureDataLayer();
 
-    const gtag:
-        GoogleGtagFunction = (
-        command,
-        target,
-        parameters,
-    ) => {
-        const args:
-            unknown[] = [
-            command,
-            target,
-        ];
-
-        if (
-            parameters !==
-            undefined
-        ) {
-            args.push(
-                parameters,
-            );
-        }
-
+    const gtag = function (
+        command: string,
+        target: unknown,
+        parameters?: Record<
+            string,
+            unknown
+        >,
+    ): void {
+        /*
+         * Google gtag.js ожидает
+         * объект arguments,
+         * как в официальном коде.
+         */
         dataLayer.push(
-            args,
+            arguments,
         );
-    };
+    } as GoogleGtagFunction;
 
     window.gtag =
         gtag;
