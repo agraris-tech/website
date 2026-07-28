@@ -1,34 +1,22 @@
+import {
+    initGoogleTag,
+    type GoogleGtagFunction,
+} from './googleTag';
+
 const GOOGLE_ADS_ID =
     'AW-18176485543';
 
 const GOOGLE_ADS_HOSTNAME =
     'agraristech.by';
 
-const GOOGLE_ADS_SCRIPT_ID =
-    'agraris-google-ads-tag';
-
-const GOOGLE_ADS_SCRIPT_URL =
-    `https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ADS_ID}`;
-
-export type GoogleAdsGtagFunction = (
-    command: string,
-    target: unknown,
-    parameters?: Record<
-        string,
-        unknown
-    >,
-) => void;
+export type GoogleAdsGtagFunction =
+    GoogleGtagFunction;
 
 type GoogleAdsConversionParameters =
     Record<string, unknown>;
 
 declare global {
     interface Window {
-        dataLayer?: unknown[];
-
-        gtag?:
-            GoogleAdsGtagFunction;
-
         __AGRARIS_GOOGLE_ADS_INITIALIZED__?:
             boolean;
     }
@@ -75,74 +63,6 @@ export function isGoogleAdsEnabled(
     );
 }
 
-function ensureDataLayer():
-    unknown[] {
-    window.dataLayer =
-        window.dataLayer || [];
-
-    return window.dataLayer;
-}
-
-function ensureGtag():
-    GoogleAdsGtagFunction {
-    if (
-        typeof window.gtag ===
-        'function'
-    ) {
-        return window.gtag;
-    }
-
-    const dataLayer =
-        ensureDataLayer();
-
-    const gtag:
-        GoogleAdsGtagFunction = (
-        command,
-        target,
-        parameters,
-    ) => {
-        dataLayer.push([
-            command,
-            target,
-            parameters,
-        ]);
-    };
-
-    window.gtag =
-        gtag;
-
-    return gtag;
-}
-
-function loadGoogleAdsScript():
-    void {
-    if (
-        document.getElementById(
-            GOOGLE_ADS_SCRIPT_ID,
-        )
-    ) {
-        return;
-    }
-
-    const script =
-        document.createElement(
-            'script',
-        );
-
-    script.id =
-        GOOGLE_ADS_SCRIPT_ID;
-
-    script.async =
-        true;
-
-    script.src =
-        GOOGLE_ADS_SCRIPT_URL;
-
-    document.head.appendChild(
-        script,
-    );
-}
-
 export function initGoogleAds():
     boolean {
     if (
@@ -158,7 +78,9 @@ export function initGoogleAds():
      * Google Ads работает только
      * на белорусском домене.
      */
-    if (!isGoogleAdsEnabled()) {
+    if (
+        !isGoogleAdsEnabled()
+    ) {
         return false;
     }
 
@@ -170,15 +92,19 @@ export function initGoogleAds():
     }
 
     const gtag =
-        ensureGtag();
+        initGoogleTag(
+            GOOGLE_ADS_ID,
+        );
 
-    loadGoogleAdsScript();
+    if (!gtag) {
+        return false;
+    }
 
-    gtag(
-        'js',
-        new Date(),
-    );
-
+    /*
+     * Подключаем Google Ads
+     * как дополнительное назначение
+     * уже загруженного Google-тега.
+     */
     gtag(
         'config',
         GOOGLE_ADS_ID,

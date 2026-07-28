@@ -9,11 +9,27 @@ import {
 import App from './App';
 
 import {
+    initGoogleAnalytics,
+} from './lib/googleAnalytics';
+
+import {
     initGoogleAds,
 } from './lib/googleAds';
 
 import './index.css';
 
+/*
+ * Сначала запускаем GA4.
+ * Он работает на всех трёх
+ * основных доменах.
+ */
+initGoogleAnalytics();
+
+/*
+ * Затем подключаем Google Ads.
+ * Он добавится только на
+ * agraristech.by.
+ */
 initGoogleAds();
 
 ReactDOM
